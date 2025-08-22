@@ -10,15 +10,16 @@ Responsável por:
 - Configurações da conta
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, make_response
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from app import db
 from models.user import User, QuizResult
 from models.quiz import Quiz
 from utils.decorators import admin_required, check_user_permissions
 from utils.helpers import validate_email, validate_password
 import re
+import csv
+from io import StringIO
 
 # Criar blueprint para rotas de usuário
 user = Blueprint('user', __name__)
@@ -58,6 +59,8 @@ def edit_profile():
     """Editar perfil do usuário"""
 
     if request.method == 'POST':
+        db = current_app.extensions['sqlalchemy']
+        
         # Obter dados do formulário
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
@@ -193,7 +196,8 @@ def manage_users():
 @admin_required
 def promote_user(user_id):
     """Promover usuário (aluno -> moderador)"""
-
+    db = current_app.extensions['sqlalchemy']
+    
     target_user = User.query.get_or_404(user_id)
 
     if target_user.id == current_user.id:
@@ -220,7 +224,8 @@ def promote_user(user_id):
 @admin_required
 def demote_user(user_id):
     """Rebaixar usuário (moderador -> aluno)"""
-
+    db = current_app.extensions['sqlalchemy']
+    
     target_user = User.query.get_or_404(user_id)
 
     if target_user.id == current_user.id:
@@ -247,233 +252,6 @@ def demote_user(user_id):
 @admin_required
 def toggle_approval(user_id):
     """Alternar aprovação do usuário"""
-
-    target_user = User.query.get_or_404(user_id)
-
-    if target_user.id == current_user.id:
-        flash('Você não pode alterar sua própria aprovação.', 'error')
-        return redirect(url_for('user.manage_users'))
-
-    try:
-        if target_user.is_approved:
-            target_user.is_approved = False
-            action = 'desaprovado'
-        else:
-            target_user.is_approved = True
-            action = 'aprovado'
-
-        db.session.commit()
-        flash(f'{target_user.full_name} {action} com sucesso!', 'success')
-
-    except Exception as e:
-        db.session.rollback()
-        flash('Erro ao alterar aprovação.', 'error')
-        print(f"Erro ao alterar aprovação: {e}")
-
-    return redirect(url_for('user.manage_users'))
-
-
-@user.route('/view/<int:user_id>')
-@login_required
-def view_user(user_id):
-    """Visualizar perfil de outro usuário"""
-
-    target_user = User.query.get_or_404(user_id)
-
-    # Verificar permissão
-    if not check_user_permissions(target_user, 'view'):
-        flash('Você não tem permissão para ver este perfil.', 'error')
-        return redirect(url_for('dashboard.index'))
-
-    # Estatísticas do usuário
-    user_stats = target_user.get_quiz_stats()
-
-    # Atividade recente (limitada se não for admin)
-    if target_user.is_student:
-        recent_activity = (QuizResult.query
-                           .filter_by(user_id=target_user.id)
-                           .join(Quiz)
-                           .order_by(QuizResult.completed_at.desc())
-                           .limit(5 if current_user.is_admin else 3)
-                           .all())
-    else:
-        recent_activity = (Quiz.query
-                           .filter_by(created_by=target_user.id)
-                           .order_by(Quiz.created_at.desc())
-                           .limit(5 if current_user.is_admin else 3)
-                           .all())
-
-    return render_template('user/view_user.html',
-                           target_user=target_user,
-                           user_stats=user_stats,
-                           recent_activity=recent_activity,
-                           can_edit=check_user_permissions(target_user, 'edit'))
-
-
-@user.route('/delete/<int:user_id>', methods=['POST'])
-@login_required
-@admin_required
-def delete_user(user_id):
-    """Excluir usuário (apenas admin)"""
-
-    target_user = User.query.get_or_404(user_id)
-
-    if target_user.id == current_user.id:
-        flash('Você não pode excluir sua própria conta.', 'error')
-        return redirect(url_for('user.manage_users'))
-
-    if target_user.is_admin:
-        flash('Não é possível excluir outro administrador.', 'error')
-        return redirect(url_for('user.manage_users'))
-
-    user_name = target_user.full_name
-
-    try:
-        # Excluir usuário (CASCADE vai excluir quizzes e resultados relacionados)
-        db.session.delete(target_user)
-        db.session.commit()
-
-        flash(f'Usuário {user_name} excluído com sucesso.', 'success')
-
-    except Exception as e:
-        db.session.rollback()
-        flash('Erro ao excluir usuário.', 'error')
-        print(f"Erro ao excluir usuário: {e}")
-
-    return redirect(url_for('user.manage_users'))
-
-
-@user.route('/bulk_action', methods=['POST'])
-@login_required
-@admin_required
-def bulk_action():
-    """Ações em lote para usuários"""
-
-    action = request.form.get('action')
-    user_ids = request.form.getlist('user_ids')
-
-    if not user_ids:
-        flash('Nenhum usuário selecionado.', 'warning')
-        return redirect(url_for('user.manage_users'))
-
-    try:
-        user_ids = [int(uid) for uid in user_ids if uid != str(current_user.id)]
-        users = User.query.filter(User.id.in_(user_ids)).all()
-
-        count = 0
-
-        if action == 'approve':
-            for user_obj in users:
-                if not user_obj.is_approved:
-                    user_obj.is_approved = True
-                    count += 1
-            flash(f'{count} usuário(s) aprovado(s)!', 'success')
-
-        elif action == 'disapprove':
-            for user_obj in users:
-                if user_obj.is_approved and not user_obj.is_admin:
-                    user_obj.is_approved = False
-                    count += 1
-            flash(f'{count} usuário(s) desaprovado(s)!', 'success')
-
-        elif action == 'promote':
-            for user_obj in users:
-                if user_obj.is_student:
-                    user_obj.promote_to_moderator()
-                    count += 1
-            flash(f'{count} usuário(s) promovido(s) a moderador!', 'success')
-
-        elif action == 'demote':
-            for user_obj in users:
-                if user_obj.is_moderator:
-                    user_obj.demote_to_student()
-                    count += 1
-            flash(f'{count} usuário(s) rebaixado(s) a aluno!', 'success')
-
-        elif action == 'delete':
-            for user_obj in users:
-                if not user_obj.is_admin:
-                    db.session.delete(user_obj)
-                    count += 1
-            flash(f'{count} usuário(s) excluído(s)!', 'success')
-
-        db.session.commit()
-
-    except Exception as e:
-        db.session.rollback()
-        flash('Erro ao executar ação em lote.', 'error')
-        print(f"Erro na ação em lote: {e}")
-
-    return redirect(url_for('user.manage_users'))
-
-
-@user.route('/export')
-@login_required
-@admin_required
-def export_users():
-    """Exportar lista de usuários (CSV)"""
-
-    from flask import make_response
-    import csv
-    from io import StringIO
-
-    # Criar CSV em memória
-    output = StringIO()
-    writer = csv.writer(output)
-
-    # Cabeçalho
-    writer.writerow(['ID', 'Username', 'Nome', 'Email', 'Tipo', 'Aprovado', 'Data Criação'])
-
-    # Dados dos usuários
-    users = User.query.order_by(User.created_at.desc()).all()
-    for user_obj in users:
-        writer.writerow([
-            user_obj.id,
-            user_obj.username,
-            user_obj.full_name,
-            user_obj.email,
-            user_obj.get_user_type_display(),
-            'Sim' if user_obj.is_approved else 'Não',
-            user_obj.created_at.strftime('%d/%m/%Y %H:%M')
-        ])
-
-    # Criar resposta
-    response = make_response(output.getvalue())
-    response.headers['Content-Type'] = 'text/csv'
-    response.headers['Content-Disposition'] = 'attachment; filename=usuarios_brainchild.csv'
-
-    return response
-
-
-@user.route('/api/user_stats/<int:user_id>')
-@login_required
-def api_user_stats(user_id):
-    """API para estatísticas do usuário"""
-
-    target_user = User.query.get_or_404(user_id)
-
-    # Verificar permissão
-    if not check_user_permissions(target_user, 'view'):
-        return jsonify({'error': 'Sem permissão'}), 403
-
-    stats = target_user.get_quiz_stats()
-
-    return jsonify({
-        'user_type': target_user.user_type,
-        'stats': stats,
-        'full_name': target_user.full_name,
-        'created_at': target_user.created_at.isoformat()
-    })
-
-
-# Context processor para dados de usuário
-@user.context_processor
-def inject_user_data():
-    """Disponibiliza dados úteis para templates de usuário"""
-    data = {}
-
-    if current_user.is_authenticated and current_user.is_admin:
-        data['pending_users_count'] = User.query.filter_by(is_approved=False).count()
-        data['total_users_count'] = User.query.count()
-
-    return data
+    db = current_app.extensions['sqlalchemy']
+    
+    target_user = User
