@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastros Pendentes - Brainchild{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Cadastros Pendentes</h1>
+            <p class="text-muted mb-0">Gerenciar solicitações de cadastro</p>
+        </div>
+        <div class="badge bg-primary fs-6">
+            {{ pending_users|length }} pendente(s)
+        </div>
+    </div>
+
+    {% if pending_users %}
+    <!-- Actions Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('auth.bulk_approve') }}" id="bulkForm">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAll">
+                            <label class="form-check-label" for="selectAll">
+                                Selecionar todos
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <button type="submit" class="btn btn-success btn-sm" id="bulkApproveBtn" disabled>
+                            <i class="bi bi-check-circle me-1"></i>Aprovar Selecionados
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Users List -->
+    <div class="row">
+        {% for user in pending_users %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card user-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="user-avatar me-3">
+                            {{ user.first_name[0]|upper }}{{ user.last_name[0]|upper }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">{{ user.full_name }}</h5>
+                            <p class="text-muted small mb-0">@{{ user.username }}</p>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input user-checkbox"
+                                   type="checkbox"
+                                   name="user_ids"
+                                   value="{{ user.id }}"
+                                   form="bulkForm">
+                        </div>
+                    </div>
+
+                    <div class="user-info mb-3">
+                        <div class="info-item">
+                            <i class="bi bi-envelope text-muted me-2"></i>
+                            <small>{{ user.email }}</small>
+                        </div>
+                        {% if user.phone %}
+                        <div class="info-item">
+                            <i class="bi bi-telephone text-muted me-2"></i>
+                            <small>{{ user.phone }}</small>
+                        </div>
+                        {% endif %}
+                        <div class="info-item">
+                            <i class="bi bi-calendar text-muted me-2"></i>
+                            <small>{{ user.created_at.strftime('%d/%m/%Y às %H:%M') }}</small>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <form method="POST" action="{{ url_for('auth.approve_user', user_id=user.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-check-circle me-1"></i>Aprovar
+                            </button>
+                        </form>
+                        <button type="button"
+                                class="btn btn-outline-danger btn-sm w-100"
+                                onclick="confirmReject({{ user.id }}, '{{ user.full_name }}')">
+                            <i class="bi bi-x-circle me-1"></i>Rejeitar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <div class="empty-state">
+            <i class="bi bi-check-circle text-success display-1 mb-3"></i>
+            <h3>Nenhum cadastro pendente</h3>
+            <p class="text-muted">Todos os cadastros foram processados!</p>
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">
+                Voltar ao Dashboard
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Reject Confirmation Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Rejeição</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja rejeitar o cadastro de <strong id="rejectUserName"></strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Esta ação irá remover permanentemente o cadastro do sistema.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" id="rejectForm" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle me-1"></i>Rejeitar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.user-card {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.user-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+}
+
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.user-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.info-item:last-child {
+    margin-bottom: 0;
+}
+
+.empty-state {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .col-md-6.col-lg-4 {
+        margin-bottom: 20px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    const bulkApproveBtn = document.getElementById('bulkApproveBtn');
+
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            userCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkButton();
+        });
+    }
+
+    // Individual checkbox change
+    userCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectAllState();
+            updateBulkButton();
+        });
+    });
+
+    function updateSelectAllState() {
+        const checkedCount = document.querySelectorAll('.user-checkbox:checked').length;
+        const totalCount = userCheckboxes.length;
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = checkedCount === totalCount;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+        }
+    }
+
+    function updateBulkButton() {
+        const checkedCount = document.querySelectorAll('.user-checkbox:checked').length;
+        if (bulkApproveBtn) {
+            bulkApproveBtn.disabled = checkedCount === 0;
+            bulkApproveBtn.textContent = checkedCount > 0 ?
+                `Aprovar ${checkedCount} selecionado(s)` :
+                'Aprovar Selecionados';
+        }
+    }
+
+    // Bulk form submission
+    const bulkForm = document.getElementById('bulkForm');
+    if (bulkForm) {
+        bulkForm.addEventListener('submit', function(e) {
+            const checkedCount = document.querySelectorAll('.user-checkbox:checked').length;
+            if (checkedCount === 0) {
+                e.preventDefault();
+                alert('Selecione pelo menos um usuário para aprovar.');
+                return;
+            }
+
+            if (!confirm(`Tem certeza que deseja aprovar ${checkedCount} usuário(s)?`)) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+
+function confirmReject(userId, userName) {
+    document.getElementById('rejectUserName').textContent = userName;
+    document.getElementById('rejectForm').action = `/auth/reject_user/${userId}`;
+
+    const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

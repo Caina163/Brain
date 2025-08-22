@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Brainchild{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auth-wrapper {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .auth-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        overflow: hidden;
+        max-width: 900px;
+        width: 100%;
+    }
+
+    .auth-content {
+        padding: 60px 40px;
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .logo {
+        font-size: 4rem;
+        margin-bottom: 20px;
+    }
+
+    .brand-name {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+
+    .brand-subtitle {
+        color: #7f8c8d;
+        font-size: 1.1rem;
+    }
+
+    .form-floating {
+        margin-bottom: 20px;
+    }
+
+    .form-floating input {
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+        padding: 20px 15px;
+        height: auto;
+    }
+
+    .form-floating input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .btn-login {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 15px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .divider {
+        text-align: center;
+        margin: 30px 0;
+        position: relative;
+    }
+
+    .divider::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #e9ecef;
+    }
+
+    .divider span {
+        background: white;
+        padding: 0 20px;
+        color: #7f8c8d;
+    }
+
+    .register-link {
+        text-align: center;
+        margin-top: 30px;
+    }
+
+    .register-link a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .register-link a:hover {
+        text-decoration: underline;
+    }
+
+    .features {
+        background: #f8f9fa;
+        padding: 60px 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .feature-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 20px;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .feature-text h5 {
+        margin-bottom: 5px;
+        color: #2c3e50;
+    }
+
+    .feature-text p {
+        margin: 0;
+        color: #7f8c8d;
+    }
+
+    @media (max-width: 768px) {
+        .auth-content {
+            padding: 40px 20px;
+        }
+
+        .features {
+            display: none;
+        }
+
+        .brand-name {
+            font-size: 2rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="row g-0">
+            <!-- Login Form -->
+            <div class="col-lg-6">
+                <div class="auth-content">
+                    <div class="auth-header">
+                        <div class="logo">🧠</div>
+                        <h1 class="brand-name">Brainchild</h1>
+                        <p class="brand-subtitle">Sistema de Quiz Inteligente</p>
+                    </div>
+
+                    <form method="POST" data-loading="true">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="username" name="username"
+                                   placeholder="Nome de usuário ou email" required>
+                            <label for="username">
+                                <i class="bi bi-person me-2"></i>Nome de usuário ou email
+                            </label>
+                        </div>
+
+                        <div class="form-floating">
+                            <input type="password" class="form-control" id="password" name="password"
+                                   placeholder="Senha" required>
+                            <label for="password">
+                                <i class="bi bi-lock me-2"></i>Senha
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">
+                                Lembrar-me
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-login">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
+                        </button>
+                    </form>
+
+                    <div class="divider">
+                        <span>ou</span>
+                    </div>
+
+                    <div class="register-link">
+                        <p>Não tem uma conta?
+                            <a href="{{ url_for('auth.register') }}">Cadastre-se aqui</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="col-lg-6">
+                <div class="features">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-puzzle"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h5>Quizzes Inteligentes</h5>
+                            <p>Crie e jogue quizzes com embaralhamento automático de respostas</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h5>Sistema Hierárquico</h5>
+                            <p>Diferentes níveis de acesso: Administrador, Moderador e Aluno</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h5>Estatísticas Detalhadas</h5>
+                            <p>Acompanhe seu desempenho e evolução com relatórios completos</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-image"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h5>Suporte a Imagens</h5>
+                            <p>Adicione imagens aos quizzes para torná-los mais visuais</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Adicionar animações suaves aos inputs
+    const inputs = document.querySelectorAll('.form-floating input');
+
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('focused');
+        });
+
+        input.addEventListener('blur', function() {
+            if (!this.value) {
+                this.parentElement.classList.remove('focused');
+            }
+        });
+    });
+
+    // Validação em tempo real
+    const form = document.querySelector('form');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    form.addEventListener('input', function() {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+
+        if (username && password) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('disabled');
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('disabled');
+        }
+    });
+
+    // Animação de carregamento no submit
+    form.addEventListener('submit', function() {
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Entrando...';
+        submitBtn.disabled = true;
+    });
+
+    // Animação de entrada da página
+    const authCard = document.querySelector('.auth-card');
+    authCard.style.opacity = '0';
+    authCard.style.transform = 'translateY(50px)';
+
+    setTimeout(() => {
+        authCard.style.transition = 'all 0.6s ease';
+        authCard.style.opacity = '1';
+        authCard.style.transform = 'translateY(0)';
+    }, 100);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,594 @@
+{% extends "base.html" %}
+
+{% block title %}{{ quiz.title }} - Brainchild{% endblock %}
+
+{% block content %}
+<div class="quiz-game-container">
+    <!-- Quiz Header -->
+    <div class="quiz-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="quiz-info">
+                    <h2 class="quiz-title">{{ quiz.title }}</h2>
+                    <p class="quiz-description">{{ quiz.description or 'Teste seus conhecimentos!' }}</p>
+                </div>
+                <div class="quiz-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Questão</div>
+                        <div class="stat-value">
+                            <span id="currentQuestion">1</span>/<span id="totalQuestions">{{ total_questions }}</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Tempo</div>
+                        <div class="stat-value" id="timer">00:00</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Pontos</div>
+                        <div class="stat-value" id="score">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress">
+            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <!-- Game Area -->
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Question Card -->
+                <div class="question-card" id="questionCard">
+                    <!-- Question Image -->
+                    <div class="question-image-container" id="questionImageContainer" style="display: none;">
+                        <img id="questionImage" class="question-image" alt="Imagem da questão">
+                    </div>
+
+                    <!-- Question Text -->
+                    <div class="question-text-container">
+                        <h3 class="question-text" id="questionText">Carregando questão...</h3>
+                    </div>
+
+                    <!-- Answer Options -->
+                    <div class="answers-container" id="answersContainer">
+                        <!-- Options will be loaded here -->
+                    </div>
+
+                    <!-- Next Button (hidden initially) -->
+                    <div class="next-button-container" id="nextButtonContainer" style="display: none;">
+                        <button class="btn btn-primary btn-lg" id="nextButton">
+                            Próxima Questão
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Modal -->
+<div class="modal fade" id="resultsModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <div class="results-animation">
+                    <div class="trophy-icon" id="trophyIcon">🏆</div>
+                </div>
+
+                <h2 class="results-title" id="resultsTitle">Quiz Concluído!</h2>
+                <p class="results-subtitle" id="resultsSubtitle">Parabéns pelo esforço!</p>
+
+                <div class="results-stats mt-4">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-number" id="finalScore">0</div>
+                                <div class="stat-label">Pontuação</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-number" id="finalPercentage">0%</div>
+                                <div class="stat-label">Acertos</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-number" id="finalTime">00:00</div>
+                                <div class="stat-label">Tempo</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="results-message mt-4" id="resultsMessage">
+                    <!-- Motivational message will be added here -->
+                </div>
+
+                <div class="results-actions mt-4">
+                    <button class="btn btn-success btn-lg me-3" onclick="playAgain()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Jogar Novamente
+                    </button>
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-list me-2"></i>Voltar aos Quizzes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.quiz-game-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+.quiz-header {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 20px 0;
+}
+
+.quiz-title {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.quiz-description {
+    margin: 5px 0 0 0;
+    opacity: 0.9;
+}
+
+.quiz-stats {
+    display: flex;
+    gap: 30px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.progress-container {
+    background: rgba(255, 255, 255, 0.2);
+    height: 6px;
+}
+
+.progress {
+    height: 100%;
+    background: transparent;
+}
+
+.progress-bar {
+    background: #28a745;
+    transition: width 0.3s ease;
+}
+
+.question-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
+}
+
+.question-image {
+    width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.question-text {
+    color: #2c3e50;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 30px;
+    line-height: 1.4;
+}
+
+.answer-option {
+    background: #f8f9fa;
+    border: 3px solid #e9ecef;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.answer-option:hover {
+    border-color: #007bff;
+    background: #e3f2fd;
+    transform: translateY(-2px);
+}
+
+.answer-option.selected {
+    border-color: #007bff;
+    background: #e3f2fd;
+}
+
+.answer-option.correct {
+    background: #d4edda !important;
+    border-color: #28a745 !important;
+    color: #155724;
+}
+
+.answer-option.incorrect {
+    background: #f8d7da !important;
+    border-color: #dc3545 !important;
+    color: #721c24;
+}
+
+.answer-option.disabled {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.answer-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    font-weight: bold;
+    margin-right: 15px;
+}
+
+.answer-option.correct .answer-letter {
+    background: #28a745;
+}
+
+.answer-option.incorrect .answer-letter {
+    background: #dc3545;
+}
+
+.answer-text {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.next-button-container {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.results-animation {
+    margin-bottom: 30px;
+}
+
+.trophy-icon {
+    font-size: 4rem;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-20px);
+    }
+    60% {
+        transform: translateY(-10px);
+    }
+}
+
+.results-title {
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.results-subtitle {
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #007bff;
+}
+
+.results-message {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 15px;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .quiz-stats {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .question-card {
+        padding: 20px;
+        margin-top: 15px;
+    }
+
+    .question-text {
+        font-size: 1.2rem;
+    }
+
+    .answer-option {
+        padding: 15px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let gameData = {
+    questions: {{ questions | tojson }},
+    currentQuestionIndex: 0,
+    score: 0,
+    startTime: null,
+    answers: [],
+    isAnswered: false
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeGame();
+});
+
+function initializeGame() {
+    gameData.startTime = new Date();
+    startTimer();
+    loadCurrentQuestion();
+    updateProgress();
+}
+
+function startTimer() {
+    setInterval(function() {
+        if (gameData.startTime) {
+            const elapsed = Math.floor((new Date() - gameData.startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('timer').textContent =
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }, 1000);
+}
+
+function loadCurrentQuestion() {
+    const question = gameData.questions[gameData.currentQuestionIndex];
+
+    // Update question counter
+    document.getElementById('currentQuestion').textContent = gameData.currentQuestionIndex + 1;
+
+    // Load question image if exists
+    const imageContainer = document.getElementById('questionImageContainer');
+    if (question.image_filename) {
+        document.getElementById('questionImage').src =
+            `/static/uploads/${question.image_filename}`;
+        imageContainer.style.display = 'block';
+    } else {
+        imageContainer.style.display = 'none';
+    }
+
+    // Load question text
+    document.getElementById('questionText').textContent = question.text;
+
+    // Load answer options
+    loadAnswerOptions(question.alternatives);
+
+    // Hide next button
+    document.getElementById('nextButtonContainer').style.display = 'none';
+    gameData.isAnswered = false;
+}
+
+function loadAnswerOptions(alternatives) {
+    const container = document.getElementById('answersContainer');
+    container.innerHTML = '';
+
+    alternatives.forEach((alternative, index) => {
+        const optionDiv = document.createElement('div');
+        optionDiv.className = 'answer-option';
+        optionDiv.onclick = () => selectAnswer(alternative.letter, alternative.is_correct);
+
+        optionDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="answer-letter">${alternative.letter}</div>
+                <div class="answer-text">${alternative.text}</div>
+            </div>
+        `;
+
+        container.appendChild(optionDiv);
+    });
+}
+
+function selectAnswer(selectedLetter, isCorrect) {
+    if (gameData.isAnswered) return;
+
+    gameData.isAnswered = true;
+
+    // Store answer
+    gameData.answers.push({
+        questionIndex: gameData.currentQuestionIndex,
+        selectedLetter: selectedLetter,
+        isCorrect: isCorrect
+    });
+
+    // Update score
+    if (isCorrect) {
+        gameData.score++;
+        document.getElementById('score').textContent = gameData.score;
+    }
+
+    // Show results for all options
+    const options = document.querySelectorAll('.answer-option');
+    const question = gameData.questions[gameData.currentQuestionIndex];
+
+    options.forEach(option => {
+        const letter = option.querySelector('.answer-letter').textContent;
+        const alternative = question.alternatives.find(alt => alt.letter === letter);
+
+        option.classList.add('disabled');
+
+        if (alternative.is_correct) {
+            option.classList.add('correct');
+        } else if (letter === selectedLetter) {
+            option.classList.add('incorrect');
+        }
+    });
+
+    // Show next button or finish game
+    setTimeout(() => {
+        if (gameData.currentQuestionIndex < gameData.questions.length - 1) {
+            showNextButton();
+        } else {
+            finishGame();
+        }
+    }, 5000);
+}
+
+function showNextButton() {
+    const nextButton = document.getElementById('nextButton');
+    nextButton.textContent = 'Próxima Questão';
+    nextButton.onclick = nextQuestion;
+    document.getElementById('nextButtonContainer').style.display = 'block';
+}
+
+function nextQuestion() {
+    gameData.currentQuestionIndex++;
+    updateProgress();
+    loadCurrentQuestion();
+}
+
+function updateProgress() {
+    const progress = ((gameData.currentQuestionIndex + 1) / gameData.questions.length) * 100;
+    document.getElementById('progressBar').style.width = `${progress}%`;
+}
+
+function finishGame() {
+    const endTime = new Date();
+    const totalTime = Math.floor((endTime - gameData.startTime) / 1000);
+    const percentage = Math.round((gameData.score / gameData.questions.length) * 100);
+
+    // Update results modal
+    document.getElementById('finalScore').textContent =
+        `${gameData.score}/${gameData.questions.length}`;
+    document.getElementById('finalPercentage').textContent = `${percentage}%`;
+
+    const minutes = Math.floor(totalTime / 60);
+    const seconds = totalTime % 60;
+    document.getElementById('finalTime').textContent =
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    // Set motivational message and trophy
+    setResultsMessage(percentage);
+
+    // Show results modal
+    const modal = new bootstrap.Modal(document.getElementById('resultsModal'));
+    modal.show();
+
+    // Save result to server
+    saveResult(gameData.score, gameData.questions.length, totalTime);
+}
+
+function setResultsMessage(percentage) {
+    const title = document.getElementById('resultsTitle');
+    const subtitle = document.getElementById('resultsSubtitle');
+    const message = document.getElementById('resultsMessage');
+    const trophy = document.getElementById('trophyIcon');
+
+    if (percentage >= 90) {
+        title.textContent = 'Excelente!';
+        subtitle.textContent = 'Você é um verdadeiro especialista!';
+        message.textContent = 'Parabéns! Sua pontuação foi fantástica. Continue assim e você chegará longe!';
+        trophy.textContent = '🏆';
+    } else if (percentage >= 70) {
+        title.textContent = 'Muito Bem!';
+        subtitle.textContent = 'Ótimo desempenho!';
+        message.textContent = 'Você demonstrou um bom conhecimento. Continue estudando para alcançar a excelência!';
+        trophy.textContent = '🥈';
+    } else if (percentage >= 50) {
+        title.textContent = 'Bom Trabalho!';
+        subtitle.textContent = 'Você está no caminho certo!';
+        message.textContent = 'Um desempenho sólido! Com mais prática, você pode alcançar resultados ainda melhores.';
+        trophy.textContent = '🥉';
+    } else {
+        title.textContent = 'Continue Tentando!';
+        subtitle.textContent = 'Cada tentativa é um aprendizado!';
+        message.textContent = 'Não desanime! O conhecimento vem com a prática. Tente novamente e você verá a melhoria!';
+        trophy.textContent = '📚';
+    }
+}
+
+function playAgain() {
+    // Reset game data
+    gameData = {
+        questions: gameData.questions,
+        currentQuestionIndex: 0,
+        score: 0,
+        startTime: null,
+        answers: [],
+        isAnswered: false
+    };
+
+    // Reset UI
+    document.getElementById('score').textContent = '0';
+
+    // Hide modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('resultsModal'));
+    modal.hide();
+
+    // Restart game
+    initializeGame();
+}
+
+function saveResult(score, totalQuestions, timeSpent) {
+    fetch('/quiz/finish/{{ quiz.id }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            score: score,
+            total_questions: totalQuestions,
+            time_spent: timeSpent
+        })
+    });
+}
+</script>
+{% endblock %}

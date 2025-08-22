@@ -1,0 +1,729 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Quiz - Brainchild{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('quiz.manage') }}" class="btn btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h1 class="h3 mb-1">Editar Quiz</h1>
+            <p class="text-muted mb-0">{{ quiz.title }}</p>
+        </div>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="steps-indicator mb-4">
+        <div class="step active" id="step1-indicator">
+            <div class="step-number">1</div>
+            <div class="step-label">Informações Básicas</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step2-indicator">
+            <div class="step-number">2</div>
+            <div class="step-label">Editar Questões</div>
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="quizForm">
+        <!-- STEP 1: Basic Information -->
+        <div id="step1" class="step-content">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Informações do Quiz</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-4">
+                                <label for="title" class="form-label">Título do Quiz *</label>
+                                <input type="text"
+                                       class="form-control form-control-lg"
+                                       id="title"
+                                       name="title"
+                                       value="{{ quiz.title }}"
+                                       required
+                                       maxlength="200">
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="description" class="form-label">Descrição (opcional)</label>
+                                <textarea class="form-control"
+                                          id="description"
+                                          name="description"
+                                          rows="3"
+                                          maxlength="1000">{{ quiz.description or '' }}</textarea>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="quiz_image" class="form-label">Imagem de Capa</label>
+                                {% if quiz.image_filename %}
+                                <div class="current-image mb-3">
+                                    <label class="form-label">Imagem atual:</label>
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ url_for('static', filename='uploads/' + quiz.image_filename) }}"
+                                             class="current-quiz-image me-3"
+                                             alt="Imagem atual">
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCurrentImage()">
+                                            <i class="bi bi-x"></i> Remover
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                <input type="file"
+                                       class="form-control"
+                                       id="quiz_image"
+                                       name="quiz_image"
+                                       accept="image/*">
+                                <div class="form-text">
+                                    {% if quiz.image_filename %}
+                                    Selecione uma nova imagem para substituir a atual
+                                    {% else %}
+                                    Adicione uma imagem de capa para o quiz
+                                    {% endif %}
+                                </div>
+                                <div id="quiz-image-preview" class="mt-3"></div>
+                            </div>
+                        </div>
+                        <div class="card-footer text-end">
+                            <button type="button" class="btn btn-primary btn-lg" id="nextToStep2">
+                                Próximo: Editar Questões
+                                <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: Edit Questions -->
+        <div id="step2" class="step-content" style="display: none;">
+            <div class="row">
+                <!-- Question Editor -->
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0" id="currentQuestionTitle">Questão 1</h5>
+                            <div class="question-counter">
+                                <span id="currentQuestionNum">1</span> de <span id="totalQuestions">{{ quiz.questions|length or 1 }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Question Image -->
+                            <div class="mb-3">
+                                <label class="form-label">Imagem da Questão (opcional)</label>
+                                <div id="currentQuestionImageContainer" style="display: none;">
+                                    <label class="form-label">Imagem atual:</label>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <img id="currentQuestionImage"
+                                             class="current-question-image me-3"
+                                             alt="Imagem atual da questão">
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCurrentQuestionImage()">
+                                            <i class="bi bi-x"></i> Remover
+                                        </button>
+                                    </div>
+                                </div>
+                                <input type="file"
+                                       class="form-control"
+                                       id="questionImage"
+                                       accept="image/*">
+                                <div class="form-text">A imagem aparecerá acima da pergunta</div>
+                                <div id="question-image-preview" class="mt-3"></div>
+                            </div>
+
+                            <!-- Question Text -->
+                            <div class="mb-4">
+                                <label class="form-label">Texto da Questão *</label>
+                                <textarea class="form-control form-control-lg"
+                                          id="questionText"
+                                          rows="3"
+                                          required
+                                          maxlength="2000"></textarea>
+                            </div>
+
+                            <!-- Correct Answer -->
+                            <div class="mb-3">
+                                <label class="form-label">Resposta Correta *</label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="correctAnswer"
+                                       required
+                                       maxlength="500">
+                            </div>
+
+                            <!-- Wrong Answers -->
+                            <div class="mb-4">
+                                <label class="form-label">Respostas Incorretas</label>
+                                <div id="wrongAnswersContainer">
+                                    <!-- Wrong answers will be loaded here -->
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="addWrongAnswer()">
+                                    <i class="bi bi-plus"></i> Adicionar Resposta Incorreta
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-outline-secondary" id="backToStep1">
+                                    <i class="bi bi-arrow-left me-2"></i>Voltar
+                                </button>
+                                <div>
+                                    <button type="button" class="btn btn-success me-2" onclick="saveCurrentQuestion()">
+                                        <i class="bi bi-check me-1"></i>Salvar Questão
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="addNewQuestion()">
+                                        <i class="bi bi-plus me-1"></i>Nova Questão
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Questions List Sidebar -->
+                <div class="col-lg-4">
+                    <div class="card sticky-top" style="top: 100px;">
+                        <div class="card-header">
+                            <h6 class="mb-0">Questões do Quiz</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="questionsList">
+                                <!-- Questions will be loaded here -->
+                            </div>
+
+                            <div class="mt-3 pt-3 border-top">
+                                <button type="submit" class="btn btn-success w-100" id="finalSubmit">
+                                    <i class="bi bi-save me-2"></i>Salvar Alterações
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.steps-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 30px 0;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0.5;
+}
+
+.step.active {
+    opacity: 1;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.step.active .step-number {
+    background: #007bff;
+    color: white;
+}
+
+.step-line {
+    width: 100px;
+    height: 2px;
+    background: #e9ecef;
+    margin: 0 20px;
+}
+
+.current-quiz-image {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+}
+
+.current-question-image {
+    max-width: 150px;
+    max-height: 100px;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+}
+
+.question-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.question-item:hover {
+    border-color: #007bff;
+    background: #f8f9fa;
+}
+
+.question-item.active {
+    border-color: #007bff;
+    background: #e3f2fd;
+}
+
+.question-number {
+    width: 30px;
+    height: 30px;
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-right: 12px;
+}
+
+.question-preview {
+    flex-grow: 1;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.question-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.question-status {
+    font-size: 1.2rem;
+}
+
+.question-counter {
+    background: #e3f2fd;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1976d2;
+}
+
+.image-preview {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentQuestion = 1;
+let questions = {};
+let questionCounter = 0;
+let originalQuestions = {{ quiz.questions | tojson }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadExistingQuestions();
+    setupEventListeners();
+});
+
+function loadExistingQuestions() {
+    if (originalQuestions && originalQuestions.length > 0) {
+        questionCounter = originalQuestions.length;
+
+        originalQuestions.forEach((question, index) => {
+            const questionNum = index + 1;
+            questions[questionNum] = {
+                id: question.id,
+                image: null,
+                currentImageFilename: question.image_filename,
+                text: question.question_text,
+                correctAnswer: question.correct_answer,
+                wrongAnswers: [question.option_a, question.option_b, question.option_c].filter(opt => opt),
+                saved: true,
+                modified: false
+            };
+
+            if (index === 0) {
+                addQuestionToSidebar(questionNum, true);
+            } else {
+                addQuestionToSidebar(questionNum);
+            }
+        });
+
+        currentQuestion = 1;
+        loadQuestionData(1);
+        updateQuestionCounter();
+    } else {
+        // No existing questions, create first one
+        questionCounter = 1;
+        questions[1] = {
+            id: null,
+            image: null,
+            currentImageFilename: null,
+            text: '',
+            correctAnswer: '',
+            wrongAnswers: [''],
+            saved: false,
+            modified: false
+        };
+        addQuestionToSidebar(1, true);
+    }
+}
+
+function setupEventListeners() {
+    document.getElementById('nextToStep2').addEventListener('click', goToStep2);
+    document.getElementById('backToStep1').addEventListener('click', goToStep1);
+
+    document.getElementById('quiz_image').addEventListener('change', function() {
+        showImagePreview(this, 'quiz-image-preview');
+    });
+
+    document.getElementById('questionImage').addEventListener('change', function() {
+        showImagePreview(this, 'question-image-preview');
+        if (questions[currentQuestion]) {
+            questions[currentQuestion].image = this.files[0];
+            questions[currentQuestion].modified = true;
+        }
+    });
+}
+
+function goToStep2() {
+    document.getElementById('step1').style.display = 'none';
+    document.getElementById('step2').style.display = 'block';
+
+    document.getElementById('step1-indicator').classList.remove('active');
+    document.getElementById('step2-indicator').classList.add('active');
+}
+
+function goToStep1() {
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step1').style.display = 'block';
+
+    document.getElementById('step2-indicator').classList.remove('active');
+    document.getElementById('step1-indicator').classList.add('active');
+}
+
+function selectQuestion(questionNum) {
+    saveCurrentQuestionData();
+
+    currentQuestion = questionNum;
+
+    document.querySelectorAll('.question-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`[data-question="${questionNum}"]`).classList.add('active');
+
+    loadQuestionData(questionNum);
+    updateQuestionCounter();
+    document.getElementById('currentQuestionTitle').textContent = `Questão ${questionNum}`;
+}
+
+function loadQuestionData(questionNum) {
+    const question = questions[questionNum];
+
+    document.getElementById('questionText').value = question.text || '';
+    document.getElementById('correctAnswer').value = question.correctAnswer || '';
+
+    // Load current question image
+    const currentImageContainer = document.getElementById('currentQuestionImageContainer');
+    if (question.currentImageFilename) {
+        document.getElementById('currentQuestionImage').src =
+            `/static/uploads/${question.currentImageFilename}`;
+        currentImageContainer.style.display = 'block';
+    } else {
+        currentImageContainer.style.display = 'none';
+    }
+
+    // Load wrong answers
+    const container = document.getElementById('wrongAnswersContainer');
+    container.innerHTML = '';
+
+    const wrongAnswers = question.wrongAnswers.length > 0 ? question.wrongAnswers : [''];
+    wrongAnswers.forEach((answer) => {
+        addWrongAnswerField(answer);
+    });
+
+    // Clear new image preview
+    document.getElementById('question-image-preview').innerHTML = '';
+    document.getElementById('questionImage').value = '';
+}
+
+function saveCurrentQuestionData() {
+    const questionText = document.getElementById('questionText').value.trim();
+    const correctAnswer = document.getElementById('correctAnswer').value.trim();
+    const wrongAnswers = Array.from(document.querySelectorAll('.wrong-answer'))
+        .map(input => input.value.trim())
+        .filter(answer => answer.length > 0);
+
+    if (questions[currentQuestion]) {
+        const question = questions[currentQuestion];
+        const wasModified = (
+            question.text !== questionText ||
+            question.correctAnswer !== correctAnswer ||
+            JSON.stringify(question.wrongAnswers) !== JSON.stringify(wrongAnswers)
+        );
+
+        questions[currentQuestion] = {
+            ...question,
+            text: questionText,
+            correctAnswer: correctAnswer,
+            wrongAnswers: wrongAnswers,
+            modified: question.modified || wasModified
+        };
+
+        updateQuestionItem(currentQuestion);
+    }
+}
+
+function saveCurrentQuestion() {
+    const questionText = document.getElementById('questionText').value.trim();
+    const correctAnswer = document.getElementById('correctAnswer').value.trim();
+    const wrongAnswers = Array.from(document.querySelectorAll('.wrong-answer'))
+        .map(input => input.value.trim())
+        .filter(answer => answer.length > 0);
+
+    if (!questionText) {
+        alert('Por favor, digite o texto da questão');
+        return;
+    }
+
+    if (!correctAnswer) {
+        alert('Por favor, digite a resposta correta');
+        return;
+    }
+
+    if (wrongAnswers.length === 0) {
+        alert('Por favor, adicione pelo menos uma resposta incorreta');
+        return;
+    }
+
+    questions[currentQuestion] = {
+        ...questions[currentQuestion],
+        text: questionText,
+        correctAnswer: correctAnswer,
+        wrongAnswers: wrongAnswers,
+        saved: true,
+        modified: true
+    };
+
+    updateQuestionItem(currentQuestion);
+    alert('Questão salva com sucesso!');
+}
+
+function addNewQuestion() {
+    saveCurrentQuestionData();
+
+    questionCounter++;
+    currentQuestion = questionCounter;
+
+    questions[currentQuestion] = {
+        id: null,
+        image: null,
+        currentImageFilename: null,
+        text: '',
+        correctAnswer: '',
+        wrongAnswers: [''],
+        saved: false,
+        modified: false
+    };
+
+    addQuestionToSidebar(currentQuestion);
+    clearQuestionForm();
+    updateQuestionCounter();
+    selectQuestion(currentQuestion);
+}
+
+function addQuestionToSidebar(questionNum, isFirst = false) {
+    const questionsList = document.getElementById('questionsList');
+    const questionItem = document.createElement('div');
+    questionItem.className = isFirst ? 'question-item active' : 'question-item';
+    questionItem.setAttribute('data-question', questionNum);
+    questionItem.onclick = () => selectQuestion(questionNum);
+
+    questionItem.innerHTML = `
+        <div class="question-number">${questionNum.toString().padStart(2, '0')}</div>
+        <div class="question-preview">Questão ${questionNum}</div>
+        <div class="question-actions">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteQuestion(${questionNum})" title="Excluir questão">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+
+    questionsList.appendChild(questionItem);
+    updateQuestionCounter();
+}
+
+function deleteQuestion(questionNum) {
+    if (Object.keys(questions).length <= 1) {
+        alert('Deve haver pelo menos uma questão no quiz');
+        return;
+    }
+
+    if (confirm('Tem certeza que deseja excluir esta questão?')) {
+        delete questions[questionNum];
+        document.querySelector(`[data-question="${questionNum}"]`).remove();
+
+        // Select first available question
+        const remainingQuestions = Object.keys(questions).map(Number).sort((a, b) => a - b);
+        if (remainingQuestions.length > 0) {
+            selectQuestion(remainingQuestions[0]);
+        }
+
+        updateQuestionCounter();
+    }
+}
+
+function updateQuestionItem(questionNum) {
+    const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
+    const question = questions[questionNum];
+
+    const preview = question.text.length > 20 ? question.text.substring(0, 20) + '...' : question.text || `Questão ${questionNum}`;
+    questionItem.querySelector('.question-preview').textContent = preview;
+}
+
+function updateQuestionCounter() {
+    document.getElementById('currentQuestionNum').textContent = currentQuestion;
+    document.getElementById('totalQuestions').textContent = Object.keys(questions).length;
+}
+
+function clearQuestionForm() {
+    document.getElementById('questionText').value = '';
+    document.getElementById('correctAnswer').value = '';
+    document.getElementById('questionImage').value = '';
+    document.getElementById('question-image-preview').innerHTML = '';
+    document.getElementById('currentQuestionImageContainer').style.display = 'none';
+
+    const container = document.getElementById('wrongAnswersContainer');
+    container.innerHTML = '';
+    addWrongAnswerField('');
+}
+
+function addWrongAnswer() {
+    addWrongAnswerField('');
+}
+
+function addWrongAnswerField(value = '') {
+    const container = document.getElementById('wrongAnswersContainer');
+    if (container.children.length >= 5) {
+        alert('Máximo de 5 respostas incorretas por questão');
+        return;
+    }
+
+    const newAnswer = document.createElement('div');
+    newAnswer.className = 'input-group mb-2';
+    newAnswer.innerHTML = `
+        <input type="text"
+               class="form-control wrong-answer"
+               placeholder="Resposta incorreta"
+               value="${value}"
+               maxlength="500">
+        <button type="button" class="btn btn-outline-danger" onclick="removeWrongAnswer(this)">
+            <i class="bi bi-x"></i>
+        </button>
+    `;
+
+    container.appendChild(newAnswer);
+}
+
+function removeWrongAnswer(button) {
+    const container = document.getElementById('wrongAnswersContainer');
+    if (container.children.length <= 1) {
+        alert('Deve haver pelo menos uma resposta incorreta');
+        return;
+    }
+
+    button.closest('.input-group').remove();
+}
+
+function removeCurrentImage() {
+    // This would be handled by the backend
+    alert('Funcionalidade de remoção de imagem será implementada');
+}
+
+function removeCurrentQuestionImage() {
+    if (questions[currentQuestion]) {
+        questions[currentQuestion].currentImageFilename = null;
+        questions[currentQuestion].modified = true;
+        document.getElementById('currentQuestionImageContainer').style.display = 'none';
+    }
+}
+
+function showImagePreview(input, containerId) {
+    const file = input.files[0];
+    const container = document.getElementById(containerId);
+
+    container.innerHTML = '';
+
+    if (file) {
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor, selecione apenas arquivos de imagem');
+            input.value = '';
+            return;
+        }
+
+        if (file.size > 16 * 1024 * 1024) {
+            alert('Arquivo muito grande. Máximo 16MB');
+            input.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            container.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <img src="${e.target.result}" class="image-preview me-3">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage('${containerId}', '${input.id}')">
+                        <i class="bi bi-x"></i> Remover
+                    </button>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeImage(containerId, inputId) {
+    document.getElementById(containerId).innerHTML = '';
+    document.getElementById(inputId).value = '';
+}
+
+// Form submission
+document.getElementById('quizForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    saveCurrentQuestionData();
+
+    const submitBtn = document.getElementById('finalSubmit');
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+    submitBtn.disabled = true;
+
+    // Here you would submit the actual form data
+    setTimeout(() => {
+        alert('Quiz atualizado com sucesso!');
+        window.location.href = '/quiz/manage';
+    }, 2000);
+});
+</script>
+{% endblock %}

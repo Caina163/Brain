@@ -1,0 +1,564 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Usuários - Brainchild{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Gerenciar Usuários</h1>
+            <p class="text-muted mb-0">Controle completo de usuários do sistema</p>
+        </div>
+        <div>
+            <a href="{{ url_for('user.export') }}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-download me-2"></i>Exportar CSV
+            </a>
+            <a href="{{ url_for('auth.pending_users') }}" class="btn btn-warning">
+                <i class="bi bi-clock me-2"></i>Pendentes
+                {% if stats.pending > 0 %}
+                <span class="badge bg-light text-dark ms-1">{{ stats.pending }}</span>
+                {% endif %}
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary">
+                    <i class="bi bi-people"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.total_users }}</h3>
+                    <p>Total de Usuários</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-danger">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.admins }}</h3>
+                    <p>Administradores</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning">
+                    <i class="bi bi-gear"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.moderators }}</h3>
+                    <p>Moderadores</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-success">
+                    <i class="bi bi-person-check"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.students }}</h3>
+                    <p>Alunos</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Tipo de Usuário</label>
+                    <select name="type" class="form-select">
+                        <option value="all" {% if current_type == 'all' %}selected{% endif %}>Todos</option>
+                        <option value="admin" {% if current_type == 'admin' %}selected{% endif %}>Administradores</option>
+                        <option value="moderator" {% if current_type == 'moderator' %}selected{% endif %}>Moderadores</option>
+                        <option value="student" {% if current_type == 'student' %}selected{% endif %}>Alunos</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="all" {% if current_status == 'all' %}selected{% endif %}>Todos</option>
+                        <option value="approved" {% if current_status == 'approved' %}selected{% endif %}>Aprovados</option>
+                        <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pendentes</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Buscar</label>
+                    <input type="text" name="search" class="form-control"
+                           placeholder="Nome, username ou email..."
+                           value="{{ search_query }}">
+                </div>
+
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i>Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if users %}
+    <!-- Bulk Actions -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="bulkActionsForm">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAll">
+                            <label class="form-check-label" for="selectAll">
+                                Selecionar todos
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-success btn-sm"
+                                    onclick="bulkAction('approve')" disabled id="bulkApprove">
+                                <i class="bi bi-check me-1"></i>Aprovar
+                            </button>
+                            <button type="button" class="btn btn-outline-warning btn-sm"
+                                    onclick="bulkAction('promote')" disabled id="bulkPromote">
+                                <i class="bi bi-arrow-up me-1"></i>Promover
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm"
+                                    onclick="bulkAction('demote')" disabled id="bulkDemote">
+                                <i class="bi bi-arrow-down me-1"></i>Rebaixar
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                    onclick="bulkAction('delete')" disabled id="bulkDelete">
+                                <i class="bi bi-trash me-1"></i>Excluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Users List -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="50">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAllTable">
+                                </div>
+                            </th>
+                            <th>Usuário</th>
+                            <th>Tipo</th>
+                            <th>Status</th>
+                            <th>Cadastro</th>
+                            <th width="120">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div class="form-check">
+                                    <input class="form-check-input user-checkbox"
+                                           type="checkbox"
+                                           value="{{ user.id }}"
+                                           {% if user.id == current_user.id %}disabled{% endif %}>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="user-avatar me-3">
+                                        {{ user.first_name[0]|upper }}{{ user.last_name[0]|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{{ user.full_name }}</div>
+                                        <div class="text-muted small">@{{ user.username }}</div>
+                                        <div class="text-muted small">{{ user.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ user.get_user_type_color() }}">
+                                    {{ user.get_user_type_display() }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if user.is_approved %}
+                                <span class="badge bg-success">Aprovado</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pendente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ user.created_at.strftime('%d/%m/%Y') }}</small>
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
+                                            {% if user.id == current_user.id %}disabled{% endif %}>
+                                        <i class="bi bi-three-dots"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="{{ url_for('user.view_user', user_id=user.id) }}">
+                                                <i class="bi bi-eye me-2"></i>Ver Perfil
+                                            </a>
+                                        </li>
+
+                                        {% if not user.is_approved %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="singleAction('approve', {{ user.id }})">
+                                                <i class="bi bi-check me-2"></i>Aprovar
+                                            </a>
+                                        </li>
+                                        {% endif %}
+
+                                        {% if user.is_student %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="singleAction('promote', {{ user.id }})">
+                                                <i class="bi bi-arrow-up me-2"></i>Promover a Moderador
+                                            </a>
+                                        </li>
+                                        {% elif user.is_moderator %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="singleAction('demote', {{ user.id }})">
+                                                <i class="bi bi-arrow-down me-2"></i>Rebaixar a Aluno
+                                            </a>
+                                        </li>
+                                        {% endif %}
+
+                                        {% if user.is_approved %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="singleAction('disapprove', {{ user.id }})">
+                                                <i class="bi bi-x me-2"></i>Desaprovar
+                                            </a>
+                                        </li>
+                                        {% endif %}
+
+                                        {% if not user.is_admin %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#" onclick="singleAction('delete', {{ user.id }})">
+                                                <i class="bi bi-trash me-2"></i>Excluir
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <div class="empty-state">
+            <i class="bi bi-people text-muted display-1 mb-3"></i>
+            <h3>Nenhum usuário encontrado</h3>
+            <p class="text-muted">Tente ajustar os filtros de busca.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.table th {
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+    vertical-align: middle;
+    padding: 15px 12px;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.card {
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 12px 12px 0 0 !important;
+}
+
+.empty-state {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .stat-icon {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+
+    .user-avatar {
+        width: 35px;
+        height: 35px;
+        font-size: 0.8rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setupBulkActions();
+    animateStatCards();
+});
+
+function setupBulkActions() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const selectAllTableCheckbox = document.getElementById('selectAllTable');
+    const userCheckboxes = document.querySelectorAll('.user-checkbox:not([disabled])');
+    const bulkButtons = ['bulkApprove', 'bulkPromote', 'bulkDemote', 'bulkDelete'];
+
+    [selectAllCheckbox, selectAllTableCheckbox].forEach(checkbox => {
+        if (checkbox) {
+            checkbox.addEventListener('change', function() {
+                userCheckboxes.forEach(userCheckbox => {
+                    userCheckbox.checked = this.checked;
+                });
+                updateBulkButtons();
+                updateSelectAllState();
+            });
+        }
+    });
+
+    userCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectAllState();
+            updateBulkButtons();
+        });
+    });
+
+    function updateSelectAllState() {
+        const checkedCount = document.querySelectorAll('.user-checkbox:checked').length;
+        const totalCount = userCheckboxes.length;
+
+        [selectAllCheckbox, selectAllTableCheckbox].forEach(checkbox => {
+            if (checkbox) {
+                checkbox.checked = checkedCount === totalCount;
+                checkbox.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+            }
+        });
+    }
+
+    function updateBulkButtons() {
+        const checkedCount = document.querySelectorAll('.user-checkbox:checked').length;
+
+        bulkButtons.forEach(buttonId => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = checkedCount === 0;
+            }
+        });
+    }
+}
+
+function animateStatCards() {
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+}
+
+function bulkAction(action) {
+    const selectedUsers = Array.from(document.querySelectorAll('.user-checkbox:checked'))
+        .map(checkbox => checkbox.value);
+
+    if (selectedUsers.length === 0) {
+        alert('Selecione pelo menos um usuário');
+        return;
+    }
+
+    const actionNames = {
+        'approve': 'aprovar',
+        'promote': 'promover',
+        'demote': 'rebaixar',
+        'delete': 'excluir'
+    };
+
+    const actionName = actionNames[action];
+    const count = selectedUsers.length;
+
+    if (!confirm(`Tem certeza que deseja ${actionName} ${count} usuário(s) selecionado(s)?`)) {
+        return;
+    }
+
+    fetch('/user/bulk_action', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: action,
+            user_ids: selectedUsers
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao executar ação: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erro ao executar ação');
+        console.error('Error:', error);
+    });
+}
+
+function singleAction(action, userId) {
+    const actionNames = {
+        'approve': 'aprovar este usuário',
+        'disapprove': 'desaprovar este usuário',
+        'promote': 'promover este usuário a moderador',
+        'demote': 'rebaixar este usuário a aluno',
+        'delete': 'excluir este usuário'
+    };
+
+    const actionName = actionNames[action];
+
+    if (!confirm(`Tem certeza que deseja ${actionName}?`)) {
+        return;
+    }
+
+    let url;
+    switch(action) {
+        case 'approve':
+            url = `/auth/approve_user/${userId}`;
+            break;
+        case 'disapprove':
+            url = `/user/toggle_approval/${userId}`;
+            break;
+        case 'promote':
+            url = `/user/promote/${userId}`;
+            break;
+        case 'demote':
+            url = `/user/demote/${userId}`;
+            break;
+        case 'delete':
+            url = `/user/delete/${userId}`;
+            break;
+    }
+
+    fetch(url, {
+        method: 'POST'
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Erro ao executar ação');
+        }
+    })
+    .catch(error => {
+        alert('Erro ao executar ação');
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}

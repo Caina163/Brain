@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Aluno - Brainchild{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header with Logo -->
+    <div class="student-header mb-4">
+        <div class="d-flex align-items-center mb-3">
+            <div class="brainchild-logo me-3">🧠</div>
+            <div>
+                <h1 class="h2 mb-1">Brainchild</h1>
+                <p class="text-muted mb-0">Central do Aluno</p>
+            </div>
+        </div>
+        <div class="welcome-message">
+            <h3>Bem-vindo, {{ current_user.first_name }}!</h3>
+            <p class="text-muted">Continue aprendendo e testando seus conhecimentos</p>
+        </div>
+    </div>
+
+    <!-- Performance Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary">
+                    <i class="bi bi-trophy"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.quizzes_played }}</h3>
+                    <p>Quizzes Jogados</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-success">
+                    <i class="bi bi-percent"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.average_score }}%</h3>
+                    <p>Média Geral</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning">
+                    <i class="bi bi-star"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.best_score }}%</h3>
+                    <p>Melhor Resultado</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-info">
+                    <i class="bi bi-question-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.total_questions_answered }}</h3>
+                    <p>Questões Respondidas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking Position -->
+    {% if ranking_position %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="ranking-card">
+                <div class="ranking-content">
+                    <div class="ranking-icon">
+                        <i class="bi bi-award"></i>
+                    </div>
+                    <div class="ranking-info">
+                        <h5>Sua Posição no Ranking</h5>
+                        <p class="mb-0">
+                            Você está em <strong>#{{ ranking_position }}</strong> de {{ total_students }} alunos
+                        </p>
+                    </div>
+                    <div class="ranking-badge">
+                        {% if ranking_position <= 3 %}
+                        <span class="badge bg-warning fs-6">Top 3!</span>
+                        {% elif ranking_position <= 10 %}
+                        <span class="badge bg-success fs-6">Top 10!</span>
+                        {% else %}
+                        <span class="badge bg-primary fs-6">#{{ ranking_position }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Available Quizzes -->
+        <div class="col-md-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Quizzes Disponíveis</h5>
+                </div>
+                <div class="card-body">
+                    {% if available_quizzes %}
+                    <div class="row">
+                        {% for quiz in available_quizzes %}
+                        <div class="col-md-6 mb-3">
+                            <div class="quiz-card">
+                                {% if quiz.image_filename %}
+                                <div class="quiz-image">
+                                    <img src="{{ url_for('static', filename='uploads/' + quiz.image_filename) }}"
+                                         alt="{{ quiz.title }}" class="img-fluid">
+                                </div>
+                                {% endif %}
+                                <div class="quiz-card-body">
+                                    <h6 class="quiz-title">{{ quiz.title }}</h6>
+                                    {% if quiz.description %}
+                                    <p class="quiz-description">
+                                        {{ quiz.description[:100] }}{% if quiz.description|length > 100 %}...{% endif %}
+                                    </p>
+                                    {% endif %}
+                                    <div class="quiz-stats mb-3">
+                                        <small class="text-muted">
+                                            <i class="bi bi-question-circle me-1"></i>{{ quiz.question_count }} questões
+                                            {% if quiz.time_limit %}
+                                            <i class="bi bi-clock ms-2 me-1"></i>{{ quiz.time_limit }} min
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <a href="{{ url_for('quiz.play', quiz_id=quiz.id) }}"
+                                       class="btn btn-primary w-100">
+                                        <i class="bi bi-play me-1"></i>Jogar Quiz
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state text-center py-4">
+                        <i class="bi bi-puzzle text-muted display-4 mb-3"></i>
+                        <h6>Nenhum quiz disponível</h6>
+                        <p class="text-muted">Aguarde novos quizzes serem criados!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Results & Recommendations -->
+        <div class="col-md-4">
+            <!-- Recent Results -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Resultados Recentes</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_results %}
+                    <div class="results-list">
+                        {% for result in recent_results %}
+                        <div class="result-item">
+                            <div class="result-info">
+                                <div class="result-quiz">{{ result.quiz.title }}</div>
+                                <div class="result-meta">
+                                    <span class="badge bg-{{ result.grade_color }}">
+                                        {{ result.percentage_score }}%
+                                    </span>
+                                    <small class="text-muted ms-2">
+                                        {{ result.completed_at.strftime('%d/%m') }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted small">Nenhum resultado ainda.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recommended Quizzes -->
+            {% if recommended_quizzes %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Recomendados para Você</h6>
+                </div>
+                <div class="card-body">
+                    {% for quiz in recommended_quizzes %}
+                    <div class="recommendation-item">
+                        <div class="recommendation-info">
+                            <div class="recommendation-title">{{ quiz.title }}</div>
+                            <div class="recommendation-meta">
+                                <small class="text-muted">
+                                    {{ quiz.question_count }} questões
+                                </small>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('quiz.play', quiz_id=quiz.id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            Jogar
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.brainchild-logo {
+    font-size: 3rem;
+}
+
+.student-header {
+    background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+
+.ranking-card {
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+}
+
+.ranking-content {
+    display: flex;
+    align-items: center;
+}
+
+.ranking-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.ranking-info {
+    flex-grow: 1;
+}
+
+.ranking-info h5 {
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.quiz-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    height: 100%;
+}
+
+.quiz-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+.quiz-image {
+    height: 120px;
+    overflow: hidden;
+}
+
+.quiz-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.quiz-card-body {
+    padding: 15px;
+}
+
+.quiz-title {
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.quiz-description {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+}
+
+.result-item, .recommendation-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.result-item:last-child, .recommendation-item:last-child {
+    border-bottom: none;
+}
+
+.result-quiz, .recommendation-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.recommendation-title {
+    font-size: 0.85rem;
+}
+
+.empty-state {
+    color: #6c757d;
+}
+
+.card {
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 12px 12px 0 0 !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animação dos cards de estatística
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Animação do ranking se existir
+    const rankingCard = document.querySelector('.ranking-card');
+    if (rankingCard) {
+        rankingCard.style.opacity = '0';
+        rankingCard.style.transform = 'scale(0.95)';
+
+        setTimeout(() => {
+            rankingCard.style.transition = 'all 0.6s ease';
+            rankingCard.style.opacity = '1';
+            rankingCard.style.transform = 'scale(1)';
+        }, 500);
+    }
+});
+</script>
+{% endblock %}

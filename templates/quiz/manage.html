@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Quizzes - Brainchild{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Gerenciar Quizzes</h1>
+            <p class="text-muted mb-0">
+                {% if current_user.is_admin %}
+                Todos os quizzes do sistema
+                {% else %}
+                Seus quizzes criados
+                {% endif %}
+            </p>
+        </div>
+        <a href="{{ url_for('quiz.create') }}" class="btn btn-success">
+            <i class="bi bi-plus-circle me-2"></i>Criar Novo Quiz
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="all" {% if current_status == 'all' %}selected{% endif %}>Todos</option>
+                        <option value="active" {% if current_status == 'active' %}selected{% endif %}>Ativos</option>
+                        <option value="archived" {% if current_status == 'archived' %}selected{% endif %}>Arquivados</option>
+                        <option value="deleted" {% if current_status == 'deleted' %}selected{% endif %}>Excluídos</option>
+                    </select>
+                </div>
+
+                {% if current_user.is_admin %}
+                <div class="col-md-3">
+                    <label class="form-label">Criador</label>
+                    <select name="created_by" class="form-select">
+                        <option value="all" {% if current_creator == 'all' %}selected{% endif %}>Todos</option>
+                        <option value="me" {% if current_creator == 'me' %}selected{% endif %}>Meus quizzes</option>
+                        {% for creator in creators %}
+                        <option value="{{ creator.id }}" {% if current_creator == creator.id|string %}selected{% endif %}>
+                            {{ creator.full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <div class="col-md-4">
+                    <label class="form-label">Buscar</label>
+                    <input type="text" name="search" class="form-control" placeholder="Título do quiz..." value="{{ request.args.get('search', '') }}">
+                </div>
+
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i>Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if quizzes %}
+    <!-- Bulk Actions -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="bulkActionsForm">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAll">
+                            <label class="form-check-label" for="selectAll">
+                                Selecionar todos
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="bulkAction('activate')" disabled id="bulkActivate">
+                                <i class="bi bi-play me-1"></i>Ativar
+                            </button>
+                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="bulkAction('archive')" disabled id="bulkArchive">
+                                <i class="bi bi-archive me-1"></i>Arquivar
+                            </button>
+                            {% if current_user.is_admin %}
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="bulkAction('delete')" disabled id="bulkDelete">
+                                <i class="bi bi-trash me-1"></i>Excluir
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quizzes List -->
+    <div class="row">
+        {% for quiz in quizzes %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="quiz-card">
+                <div class="quiz-card-header">
+                    <div class="form-check">
+                        <input class="form-check-input quiz-checkbox"
+                               type="checkbox"
+                               value="{{ quiz.id }}"
+                               data-quiz-id="{{ quiz.id }}">
+                    </div>
+                    <span class="badge bg-{{ quiz.get_status_color() }}">
+                        {{ quiz.get_status_display() }}
+                    </span>
+                </div>
+
+                {% if quiz.image_filename %}
+                <div class="quiz-image">
+                    <img src="{{ url_for('static', filename='uploads/' + quiz.image_filename) }}"
+                         alt="{{ quiz.title }}" class="img-fluid">
+                </div>
+                {% endif %}
+
+                <div class="quiz-card-body">
+                    <h5 class="quiz-title">{{ quiz.title }}</h5>
+                    {% if quiz.description %}
+                    <p class="quiz-description">
+                        {{ quiz.description[:100] }}{% if quiz.description|length > 100 %}...{% endif %}
+                    </p>
+                    {% endif %}
+
+                    <div class="quiz-stats">
+                        <div class="stat-item">
+                            <i class="bi bi-question-circle text-muted me-1"></i>
+                            <small>{{ quiz.question_count }} questões</small>
+                        </div>
+                        <div class="stat-item">
+                            <i class="bi bi-play-circle text-muted me-1"></i>
+                            <small>{{ quiz.results|length }} jogos</small>
+                        </div>
+                        <div class="stat-item">
+                            <i class="bi bi-person text-muted me-1"></i>
+                            <small>{{ quiz.creator.full_name }}</small>
+                        </div>
+                        <div class="stat-item">
+                            <i class="bi bi-calendar text-muted me-1"></i>
+                            <small>{{ quiz.created_at.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quiz-card-footer">
+                    <div class="btn-group w-100" role="group">
+                        <a href="{{ url_for('quiz.view', quiz_id=quiz.id) }}"
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i>
+                        </a>
+
+                        {% if quiz.can_be_edited() and (current_user.is_admin or quiz.created_by == current_user.id) %}
+                        <a href="{{ url_for('quiz.edit', quiz_id=quiz.id) }}"
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if quiz.can_be_played() %}
+                        <a href="{{ url_for('quiz.play', quiz_id=quiz.id) }}"
+                           class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-play"></i>
+                        </a>
+                        {% endif %}
+
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% if quiz.is_active and not quiz.is_archived and not quiz.is_deleted %}
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="singleAction('archive', {{ quiz.id }})">
+                                        <i class="bi bi-archive me-2"></i>Arquivar
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                {% if quiz.is_archived and current_user.is_admin %}
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="singleAction('restore', {{ quiz.id }})">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>Restaurar
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                {% if current_user.is_admin %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" onclick="singleAction('delete', {{ quiz.id }})">
+                                        <i class="bi bi-trash me-2"></i>Excluir
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <div class="empty-state">
+            <i class="bi bi-puzzle text-muted display-1 mb-3"></i>
+            <h3>Nenhum quiz encontrado</h3>
+            <p class="text-muted mb-4">
+                {% if request.args.get('search') or current_status != 'all' %}
+                Tente ajustar os filtros ou criar um novo quiz.
+                {% else %}
+                Comece criando seu primeiro quiz!
+                {% endif %}
+            </p>
+            <a href="{{ url_for('quiz.create') }}" class="btn btn-success">
+                <i class="bi bi-plus-circle me-2"></i>Criar Primeiro Quiz
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.quiz-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.quiz-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+.quiz-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 15px 0 15px;
+}
+
+.quiz-image {
+    height: 150px;
+    overflow: hidden;
+}
+
+.quiz-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.quiz-card-body {
+    padding: 15px;
+    flex-grow: 1;
+}
+
+.quiz-title {
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+.quiz-description {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+.quiz-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.quiz-card-footer {
+    padding: 15px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.empty-state {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.card {
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+@media (max-width: 768px) {
+    .quiz-stats {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .btn-group .btn {
+        padding: 8px 10px;
+        font-size: 0.8rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setupBulkActions();
+});
+
+function setupBulkActions() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const quizCheckboxes = document.querySelectorAll('.quiz-checkbox');
+    const bulkButtons = ['bulkActivate', 'bulkArchive', 'bulkDelete'];
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            quizCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkButtons();
+        });
+    }
+
+    quizCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectAllState();
+            updateBulkButtons();
+        });
+    });
+
+    function updateSelectAllState() {
+        const checkedCount = document.querySelectorAll('.quiz-checkbox:checked').length;
+        const totalCount = quizCheckboxes.length;
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = checkedCount === totalCount;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+        }
+    }
+
+    function updateBulkButtons() {
+        const checkedCount = document.querySelectorAll('.quiz-checkbox:checked').length;
+
+        bulkButtons.forEach(buttonId => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = checkedCount === 0;
+            }
+        });
+    }
+}
+
+function bulkAction(action) {
+    const selectedQuizzes = Array.from(document.querySelectorAll('.quiz-checkbox:checked'))
+        .map(checkbox => checkbox.value);
+
+    if (selectedQuizzes.length === 0) {
+        alert('Selecione pelo menos um quiz');
+        return;
+    }
+
+    const actionNames = {
+        'activate': 'ativar',
+        'archive': 'arquivar',
+        'delete': 'excluir'
+    };
+
+    const actionName = actionNames[action];
+    const count = selectedQuizzes.length;
+
+    if (!confirm(`Tem certeza que deseja ${actionName} ${count} quiz(es) selecionado(s)?`)) {
+        return;
+    }
+
+    // Send bulk action request
+    fetch('/quiz/bulk_action', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: action,
+            quiz_ids: selectedQuizzes
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao executar ação: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erro ao executar ação');
+        console.error('Error:', error);
+    });
+}
+
+function singleAction(action, quizId) {
+    const actionNames = {
+        'archive': 'arquivar este quiz',
+        'restore': 'restaurar este quiz',
+        'delete': 'excluir este quiz'
+    };
+
+    const actionName = actionNames[action];
+
+    if (!confirm(`Tem certeza que deseja ${actionName}?`)) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', action);
+
+    let url;
+    switch(action) {
+        case 'archive':
+            url = `/quiz/archive/${quizId}`;
+            break;
+        case 'restore':
+            url = `/quiz/restore/${quizId}`;
+            break;
+        case 'delete':
+            url = `/quiz/delete/${quizId}`;
+            break;
+    }
+
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Erro ao executar ação');
+        }
+    })
+    .catch(error => {
+        alert('Erro ao executar ação');
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}

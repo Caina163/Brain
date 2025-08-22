@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro - Brainchild{% endblock %}
+
+{% block content %}
+<div class="register-page">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="register-card">
+                    <!-- Header -->
+                    <div class="text-center mb-4">
+                        <div class="register-logo">🧠</div>
+                        <h1 class="register-title">Criar Conta</h1>
+                        <p class="register-subtitle">Junte-se ao Brainchild</p>
+                    </div>
+
+                    <!-- Form -->
+                    <form method="POST" id="registerForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="first_name" class="form-label">Nome *</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="first_name"
+                                           name="first_name"
+                                           value="{{ first_name or '' }}"
+                                           required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="last_name" class="form-label">Sobrenome *</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="last_name"
+                                           name="last_name"
+                                           value="{{ last_name or '' }}"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Nome de Usuário *</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="username"
+                                   name="username"
+                                   value="{{ username or '' }}"
+                                   placeholder="Apenas letras, números e underscore"
+                                   required>
+                            <div class="form-text">Mínimo 3 caracteres. Apenas letras, números e underscore (_)</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email *</label>
+                            <input type="email"
+                                   class="form-control"
+                                   id="email"
+                                   name="email"
+                                   value="{{ email or '' }}"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Telefone</label>
+                            <input type="tel"
+                                   class="form-control"
+                                   id="phone"
+                                   name="phone"
+                                   value="{{ phone or '' }}"
+                                   placeholder="(11) 99999-9999">
+                            <div class="form-text">Campo opcional</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">Senha *</label>
+                                    <input type="password"
+                                           class="form-control"
+                                           id="password"
+                                           name="password"
+                                           required>
+                                    <div class="form-text">Mínimo 6 caracteres</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirmar Senha *</label>
+                                    <input type="password"
+                                           class="form-control"
+                                           id="confirm_password"
+                                           name="confirm_password"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Processo de Aprovação:</strong><br>
+                                Após o cadastro, sua conta passará por aprovação de um administrador ou moderador.
+                                Você receberá acesso assim que for aprovado.
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mb-3">
+                            <i class="bi bi-person-plus me-2"></i>Criar Conta
+                        </button>
+                    </form>
+
+                    <!-- Login link -->
+                    <div class="text-center">
+                        <p class="mb-0">
+                            Já tem uma conta?
+                            <a href="{{ url_for('auth.login') }}" class="text-decoration-none">
+                                Faça login aqui
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.register-page {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+}
+
+.register-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    padding: 40px;
+    margin-top: 20px;
+}
+
+.register-logo {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.register-title {
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.register-subtitle {
+    color: #7f8c8d;
+    margin-bottom: 0;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    padding: 12px 15px;
+}
+
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn-primary {
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .register-card {
+        padding: 20px;
+        margin: 10px;
+    }
+
+    .register-logo {
+        font-size: 2.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('registerForm');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    const username = document.getElementById('username');
+    const email = document.getElementById('email');
+
+    // Validação de confirmação de senha
+    function validatePassword() {
+        if (password.value !== confirmPassword.value) {
+            confirmPassword.setCustomValidity('As senhas não coincidem');
+        } else {
+            confirmPassword.setCustomValidity('');
+        }
+    }
+
+    password.addEventListener('input', validatePassword);
+    confirmPassword.addEventListener('input', validatePassword);
+
+    // Validação de username
+    username.addEventListener('input', function() {
+        const value = this.value;
+        const regex = /^[a-zA-Z0-9_]+$/;
+
+        if (value.length < 3) {
+            this.setCustomValidity('Username deve ter pelo menos 3 caracteres');
+        } else if (!regex.test(value)) {
+            this.setCustomValidity('Username deve conter apenas letras, números e underscore');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+
+    // Validação de força da senha
+    password.addEventListener('input', function() {
+        const value = this.value;
+
+        if (value.length < 6) {
+            this.setCustomValidity('Senha deve ter pelo menos 6 caracteres');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+
+    // Formatação do telefone
+    const phone = document.getElementById('phone');
+    phone.addEventListener('input', function() {
+        let value = this.value.replace(/\D/g, '');
+
+        if (value.length > 0) {
+            if (value.length <= 2) {
+                value = `(${value}`;
+            } else if (value.length <= 7) {
+                value = `(${value.slice(0,2)}) ${value.slice(2)}`;
+            } else {
+                value = `(${value.slice(0,2)}) ${value.slice(2,7)}-${value.slice(7,11)}`;
+            }
+        }
+
+        this.value = value;
+    });
+
+    // Loading no submit
+    form.addEventListener('submit', function() {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Criando conta...';
+        submitBtn.disabled = true;
+    });
+
+    // Indicadores visuais de validação
+    const inputs = form.querySelectorAll('input[required]');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.checkValidity()) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            } else {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

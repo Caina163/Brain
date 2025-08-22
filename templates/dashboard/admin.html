@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Admin - Brainchild{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header with Logo -->
+    <div class="admin-header mb-4">
+        <div class="d-flex align-items-center mb-3">
+            <div class="brainchild-logo me-3">🧠</div>
+            <div>
+                <h1 class="h2 mb-1">Brainchild</h1>
+                <p class="text-muted mb-0">Painel Administrativo</p>
+            </div>
+        </div>
+        <div class="welcome-message">
+            <h3>Bem-vindo, {{ current_user.first_name }}!</h3>
+            <p class="text-muted">Aqui está um resumo do sistema</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary">
+                    <i class="bi bi-people"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.total_users }}</h3>
+                    <p>Total de Usuários</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning">
+                    <i class="bi bi-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.pending_users }}</h3>
+                    <p>Cadastros Pendentes</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-success">
+                    <i class="bi bi-puzzle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.active_quizzes }}</h3>
+                    <p>Quizzes Ativos</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-info">
+                    <i class="bi bi-play-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.total_quiz_plays }}</h3>
+                    <p>Jogos Realizados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Ações Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('user.manage_users') }}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-people me-2"></i>Gerenciar Usuários
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('quiz.create') }}" class="btn btn-outline-success w-100">
+                                <i class="bi bi-plus-circle me-2"></i>Criar Quiz
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('auth.pending_users') }}" class="btn btn-outline-warning w-100">
+                                <i class="bi bi-clock me-2"></i>Aprovar Cadastros
+                                {% if stats.pending_users > 0 %}
+                                <span class="badge bg-warning text-dark ms-1">{{ stats.pending_users }}</span>
+                                {% endif %}
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('quiz.manage') }}" class="btn btn-outline-info w-100">
+                                <i class="bi bi-list-ul me-2"></i>Gerenciar Quizzes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Recent Users -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Usuários Recentes</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_users %}
+                    <div class="user-list">
+                        {% for user in recent_users %}
+                        <div class="user-item">
+                            <div class="user-avatar">
+                                {{ user.first_name[0]|upper }}{{ user.last_name[0]|upper }}
+                            </div>
+                            <div class="user-info">
+                                <div class="user-name">{{ user.full_name }}</div>
+                                <div class="user-meta">
+                                    <span class="badge bg-{{ user.get_user_type_color() }}">
+                                        {{ user.get_user_type_display() }}
+                                    </span>
+                                    <small class="text-muted ms-2">
+                                        {{ user.created_at.strftime('%d/%m às %H:%M') }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="user-status">
+                                {% if user.is_approved %}
+                                <i class="bi bi-check-circle text-success"></i>
+                                {% else %}
+                                <i class="bi bi-clock text-warning"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Nenhum usuário cadastrado recentemente.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Popular Quizzes -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Quizzes Populares</h5>
+                </div>
+                <div class="card-body">
+                    {% if popular_quizzes %}
+                    <div class="quiz-list">
+                        {% for quiz, play_count in popular_quizzes %}
+                        <div class="quiz-item">
+                            <div class="quiz-info">
+                                <div class="quiz-title">{{ quiz.title }}</div>
+                                <div class="quiz-meta">
+                                    <small class="text-muted">
+                                        por {{ quiz.creator.full_name }}
+                                    </small>
+                                    <span class="badge bg-primary ms-2">
+                                        {{ play_count }} jogos
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="quiz-actions">
+                                <a href="{{ url_for('quiz.view', quiz_id=quiz.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Ver
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Nenhum quiz foi jogado ainda.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Atividade Recente</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_activity %}
+                    <div class="activity-feed">
+                        {% for result in recent_activity %}
+                        <div class="activity-item">
+                            <div class="activity-avatar">
+                                {{ result.user.first_name[0]|upper }}{{ result.user.last_name[0]|upper }}
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-text">
+                                    <strong>{{ result.user.full_name }}</strong>
+                                    completou o quiz
+                                    <strong>{{ result.quiz.title }}</strong>
+                                </div>
+                                <div class="activity-meta">
+                                    <span class="badge bg-{{ result.grade_color }}">
+                                        {{ result.score }}/{{ result.total_questions }}
+                                        ({{ result.percentage_score }}%)
+                                    </span>
+                                    <small class="text-muted ms-2">
+                                        {{ result.completed_at.strftime('%d/%m às %H:%M') }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Nenhuma atividade recente.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.brainchild-logo {
+    font-size: 3rem;
+}
+
+.admin-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.user-item, .quiz-item, .activity-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.user-item:last-child, .quiz-item:last-child, .activity-item:last-child {
+    border-bottom: none;
+}
+
+.user-avatar, .activity-avatar {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    margin-right: 12px;
+}
+
+.user-info, .quiz-info, .activity-content {
+    flex-grow: 1;
+}
+
+.user-name, .quiz-title, .activity-text {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.user-meta, .quiz-meta, .activity-meta {
+    display: flex;
+    align-items: center;
+}
+
+.card {
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 12px 12px 0 0 !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Adicionar animações aos cards de estatística
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+
+{% block title %}Resultado - {{ result.quiz.title }} - Brainchild{% endblock %}
+
+{% block content %}
+<div class="results-page">
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="d-flex align-items-center mb-4">
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-light me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div class="text-white">
+                <h1 class="h3 mb-1">Resultado do Quiz</h1>
+                <p class="mb-0 opacity-75">{{ result.quiz.title }}</p>
+            </div>
+        </div>
+
+        <!-- Main Results Card -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="results-card">
+                    <!-- Trophy Section -->
+                    <div class="trophy-section text-center">
+                        <div class="trophy-icon">
+                            {% if result.percentage_score >= 90 %}
+                                🏆
+                            {% elif result.percentage_score >= 70 %}
+                                🥈
+                            {% elif result.percentage_score >= 50 %}
+                                🥉
+                            {% else %}
+                                📚
+                            {% endif %}
+                        </div>
+
+                        <h2 class="results-title">
+                            {% if result.percentage_score >= 90 %}
+                                Excelente!
+                            {% elif result.percentage_score >= 70 %}
+                                Muito Bem!
+                            {% elif result.percentage_score >= 50 %}
+                                Bom Trabalho!
+                            {% else %}
+                                Continue Tentando!
+                            {% endif %}
+                        </h2>
+
+                        <p class="results-subtitle">
+                            {% if result.percentage_score >= 90 %}
+                                Você é um verdadeiro especialista!
+                            {% elif result.percentage_score >= 70 %}
+                                Ótimo desempenho!
+                            {% elif result.percentage_score >= 50 %}
+                                Você está no caminho certo!
+                            {% else %}
+                                Cada tentativa é um aprendizado!
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <!-- Score Statistics -->
+                    <div class="score-stats">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="stat-card primary">
+                                    <div class="stat-number">{{ result.score }}/{{ result.total_questions }}</div>
+                                    <div class="stat-label">Pontuação</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card success">
+                                    <div class="stat-number">{{ result.percentage_score }}%</div>
+                                    <div class="stat-label">Acertos</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card info">
+                                    <div class="stat-number">{{ result.get_time_display() }}</div>
+                                    <div class="stat-label">Tempo Gasto</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Analysis -->
+                    <div class="performance-analysis">
+                        <h4>Análise de Desempenho</h4>
+
+                        <div class="performance-item">
+                            <div class="performance-label">Nota Final</div>
+                            <div class="performance-value">
+                                <span class="grade-badge grade-{{ result.grade_letter.lower() }}">
+                                    {{ result.grade_letter }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="performance-item">
+                            <div class="performance-label">Questões Corretas</div>
+                            <div class="performance-value">
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" style="width: {{ result.percentage_score }}%"></div>
+                                    </div>
+                                    <span class="progress-text">{{ result.score }} de {{ result.total_questions }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="performance-item">
+                            <div class="performance-label">Questões Incorretas</div>
+                            <div class="performance-value">
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-danger" style="width: {{ 100 - result.percentage_score }}%"></div>
+                                    </div>
+                                    <span class="progress-text">{{ result.total_questions - result.score }} de {{ result.total_questions }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Motivational Message -->
+                    <div class="motivational-message">
+                        {% if result.percentage_score >= 90 %}
+                            <p>Parabéns! Sua pontuação foi fantástica. Continue assim e você chegará longe! Seu conhecimento demonstra dedicação e estudo.</p>
+                        {% elif result.percentage_score >= 70 %}
+                            <p>Você demonstrou um bom conhecimento sobre o assunto. Continue estudando para alcançar a excelência! Está no caminho certo.</p>
+                        {% elif result.percentage_score >= 50 %}
+                            <p>Um desempenho sólido! Com mais prática e estudo, você pode alcançar resultados ainda melhores. Não desista!</p>
+                        {% else %}
+                            <p>Não desanime! O conhecimento vem com a prática e dedicação. Revise o conteúdo e tente novamente. Cada erro é uma oportunidade de aprender!</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Quiz Information -->
+                    <div class="quiz-info">
+                        <h5>Informações do Quiz</h5>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <i class="bi bi-puzzle-fill text-primary"></i>
+                                <span>{{ result.quiz.title }}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="bi bi-calendar text-muted"></i>
+                                <span>{{ result.completed_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="bi bi-person text-muted"></i>
+                                <span>Criado por {{ result.quiz.creator.full_name }}</span>
+                            </div>
+                            {% if result.quiz.description %}
+                            <div class="info-item full-width">
+                                <i class="bi bi-info-circle text-muted"></i>
+                                <span>{{ result.quiz.description }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <a href="{{ url_for('quiz.play', quiz_id=result.quiz.id) }}"
+                                   class="btn btn-success btn-lg w-100">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>
+                                    Jogar Novamente
+                                </a>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <a href="{{ url_for('dashboard.index') }}"
+                                   class="btn btn-primary btn-lg w-100">
+                                    <i class="bi bi-list me-2"></i>
+                                    Outros Quizzes
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Share Results -->
+                        <div class="share-section text-center mt-3">
+                            <p class="text-muted mb-2">Compartilhe seu resultado:</p>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="shareResult('copy')">
+                                    <i class="bi bi-clipboard"></i> Copiar
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="shareResult('print')">
+                                    <i class="bi bi-printer"></i> Imprimir
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Quizzes -->
+        {% if related_quizzes %}
+        <div class="row justify-content-center mt-4">
+            <div class="col-lg-8">
+                <div class="related-quizzes-card">
+                    <h5>Quizzes Recomendados</h5>
+                    <div class="row">
+                        {% for quiz in related_quizzes %}
+                        <div class="col-md-6 mb-3">
+                            <div class="related-quiz-item">
+                                <div class="related-quiz-info">
+                                    <h6>{{ quiz.title }}</h6>
+                                    <small class="text-muted">{{ quiz.question_count }} questões</small>
+                                </div>
+                                <a href="{{ url_for('quiz.play', quiz_id=quiz.id) }}"
+                                   class="btn btn-outline-primary btn-sm">
+                                    Jogar
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.results-page {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+.results-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    margin-top: 20px;
+}
+
+.trophy-section {
+    margin-bottom: 40px;
+}
+
+.trophy-icon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-20px);
+    }
+    60% {
+        transform: translateY(-10px);
+    }
+}
+
+.results-title {
+    color: #2c3e50;
+    font-weight: 700;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.results-subtitle {
+    color: #6c757d;
+    font-size: 1.2rem;
+    margin-bottom: 0;
+}
+
+.score-stats {
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 25px 20px;
+    margin-bottom: 15px;
+    border: 3px solid transparent;
+}
+
+.stat-card.primary {
+    border-color: #007bff;
+}
+
+.stat-card.success {
+    border-color: #28a745;
+}
+
+.stat-card.info {
+    border-color: #17a2b8;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-weight: 500;
+    margin-top: 5px;
+}
+
+.performance-analysis {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.performance-analysis h4 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.performance-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.performance-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.grade-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: white;
+}
+
+.grade-a { background: #28a745; }
+.grade-b { background: #17a2b8; }
+.grade-c { background: #ffc107; color: #212529; }
+.grade-d { background: #fd7e14; }
+.grade-f { background: #dc3545; }
+
+.progress-bar-container {
+    width: 200px;
+    position: relative;
+}
+
+.progress {
+    height: 8px;
+    border-radius: 4px;
+}
+
+.progress-text {
+    position: absolute;
+    right: 0;
+    top: -25px;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.motivational-message {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.quiz-info {
+    margin-bottom: 30px;
+}
+
+.quiz-info h5 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.action-buttons {
+    border-top: 1px solid #e9ecef;
+    padding-top: 30px;
+}
+
+.share-section {
+    border-top: 1px solid #e9ecef;
+    padding-top: 20px;
+}
+
+.related-quizzes-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 25px;
+}
+
+.related-quiz-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+
+@media (max-width: 768px) {
+    .results-card {
+        padding: 20px;
+        margin-top: 10px;
+    }
+
+    .results-title {
+        font-size: 2rem;
+    }
+
+    .trophy-icon {
+        font-size: 3.5rem;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .performance-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .progress-bar-container {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate trophy icon
+    const trophy = document.querySelector('.trophy-icon');
+    if (trophy) {
+        setTimeout(() => {
+            trophy.style.animation = 'bounce 2s infinite';
+        }, 500);
+    }
+
+    // Animate progress bars
+    const progressBars = document.querySelectorAll('.progress-bar');
+    progressBars.forEach((bar, index) => {
+        setTimeout(() => {
+            bar.style.transition = 'width 1s ease-out';
+            bar.style.width = bar.style.width;
+        }, 1000 + (index * 200));
+    });
+});
+
+function shareResult(type) {
+    const result = {
+        quiz: "{{ result.quiz.title }}",
+        score: "{{ result.score }}/{{ result.total_questions }}",
+        percentage: "{{ result.percentage_score }}%",
+        time: "{{ result.get_time_display() }}",
+        date: "{{ result.completed_at.strftime('%d/%m/%Y') }}"
+    };
+
+    if (type === 'copy') {
+        const text = `🧠 Resultado no Brainchild!\n\nQuiz: ${result.quiz}\nPontuação: ${result.score} (${result.percentage})\nTempo: ${result.time}\nData: ${result.date}\n\nJogue você também!`;
+
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Resultado copiado para a área de transferência!');
+        }).catch(() => {
+            alert('Erro ao copiar resultado');
+        });
+    } else if (type === 'print') {
+        window.print();
+    }
+}
+</script>
+{% endblock %}

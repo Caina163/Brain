@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil - Brainchild{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Meu Perfil</h1>
+            <p class="text-muted mb-0">Suas informações pessoais e estatísticas</p>
+        </div>
+        <a href="{{ url_for('user.edit_profile') }}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil me-2"></i>Editar Perfil
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- User Information -->
+        <div class="col-lg-4 mb-4">
+            <div class="card profile-card">
+                <div class="card-body text-center">
+                    <!-- Avatar -->
+                    <div class="profile-avatar">
+                        {{ current_user.first_name[0]|upper }}{{ current_user.last_name[0]|upper }}
+                    </div>
+
+                    <!-- User Info -->
+                    <h4 class="profile-name">{{ current_user.full_name }}</h4>
+                    <p class="profile-username">@{{ current_user.username }}</p>
+
+                    <!-- User Type Badge -->
+                    <span class="badge bg-{{ current_user.get_user_type_color() }} profile-badge">
+                        {{ current_user.get_user_type_display() }}
+                    </span>
+
+                    <!-- Contact Info -->
+                    <div class="contact-info mt-4">
+                        <div class="contact-item">
+                            <i class="bi bi-envelope text-muted me-2"></i>
+                            <span>{{ current_user.email }}</span>
+                        </div>
+                        {% if current_user.phone %}
+                        <div class="contact-item">
+                            <i class="bi bi-telephone text-muted me-2"></i>
+                            <span>{{ current_user.phone }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="contact-item">
+                            <i class="bi bi-calendar text-muted me-2"></i>
+                            <span>Membro desde {{ current_user.created_at.strftime('%m/%Y') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="col-lg-8">
+            <!-- Performance Stats -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Estatísticas de Desempenho</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_user.is_student %}
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-primary">
+                                    <i class="bi bi-trophy"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>{{ user_stats.quizzes_played }}</h3>
+                                    <p>Quizzes Jogados</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-success">
+                                    <i class="bi bi-percent"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>{{ user_stats.average_score }}%</h3>
+                                    <p>Média Geral</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-warning">
+                                    <i class="bi bi-star"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>{{ user_stats.best_score }}%</h3>
+                                    <p>Melhor Resultado</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-info">
+                                    <i class="bi bi-question-circle"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>{{ user_stats.total_questions_answered }}</h3>
+                                    <p>Questões Respondidas</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-success">
+                                    <i class="bi bi-puzzle"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>{{ user_stats.quizzes_created }}</h3>
+                                    <p>Quizzes Criados</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-primary">
+                                    <i class="bi bi-check-circle"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>{{ user_stats.active_quizzes }}</h3>
+                                    <p>Quizzes Ativos</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-info">
+                                    <i class="bi bi-question-circle"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>{{ user_stats.total_questions }}</h3>
+                                    <p>Questões Criadas</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-icon bg-warning">
+                                    <i class="bi bi-play-circle"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>{{ user_stats.total_plays }}</h3>
+                                    <p>Total de Jogos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Atividade Recente</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_activity %}
+                    <div class="activity-list">
+                        {% for item in recent_activity %}
+                        <div class="activity-item">
+                            {% if current_user.is_student %}
+                            <!-- Student activity: quiz results -->
+                            <div class="activity-icon bg-primary">
+                                <i class="bi bi-play-circle"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-title">{{ item.quiz.title }}</div>
+                                <div class="activity-meta">
+                                    <span class="badge bg-{{ item.grade_color }}">
+                                        {{ item.score }}/{{ item.total_questions }} ({{ item.percentage_score }}%)
+                                    </span>
+                                    <small class="text-muted ms-2">
+                                        {{ item.completed_at.strftime('%d/%m às %H:%M') }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="activity-action">
+                                <a href="{{ url_for('quiz.result', result_id=item.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Ver Resultado
+                                </a>
+                            </div>
+                            {% else %}
+                            <!-- Creator activity: quizzes created -->
+                            <div class="activity-icon bg-success">
+                                <i class="bi bi-puzzle"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-title">{{ item.title }}</div>
+                                <div class="activity-meta">
+                                    <span class="badge bg-{{ item.get_status_color() }}">
+                                        {{ item.get_status_display() }}
+                                    </span>
+                                    <small class="text-muted ms-2">
+                                        {{ item.created_at.strftime('%d/%m às %H:%M') }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="activity-action">
+                                <a href="{{ url_for('quiz.edit', quiz_id=item.id) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Editar
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-clock-history text-muted display-4 mb-3"></i>
+                        <h6 class="text-muted">Nenhuma atividade recente</h6>
+                        <p class="text-muted">
+                            {% if current_user.is_student %}
+                            Comece jogando alguns quizzes!
+                            {% else %}
+                            Comece criando seus primeiros quizzes!
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.profile-card {
+    border-radius: 15px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 auto 20px auto;
+    border: 4px solid #fff;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.profile-name {
+    color: #2c3e50;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.profile-username {
+    color: #6c757d;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.profile-badge {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+}
+
+.contact-info {
+    text-align: left;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.contact-item:last-child {
+    border-bottom: none;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.activity-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: white;
+}
+
+.activity-content {
+    flex-grow: 1;
+}
+
+.activity-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.activity-meta {
+    display: flex;
+    align-items: center;
+}
+
+.card {
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 12px 12px 0 0 !important;
+}
+
+@media (max-width: 768px) {
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        font-size: 2rem;
+    }
+
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .stat-icon {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+
+    .activity-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .activity-action {
+        width: 100%;
+    }
+
+    .activity-action .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate stat cards
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Animate profile avatar
+    const avatar = document.querySelector('.profile-avatar');
+    if (avatar) {
+        avatar.style.transform = 'scale(0)';
+        setTimeout(() => {
+            avatar.style.transition = 'transform 0.5s ease';
+            avatar.style.transform = 'scale(1)';
+        }, 200);
+    }
+});
+</script>
+{% endblock %}
