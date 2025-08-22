@@ -12,10 +12,9 @@ Responsável por:
 
 import os
 import json
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from app import db
 from models.user import User, QuizResult
 from models.quiz import Quiz
 from models.question import Question
@@ -37,6 +36,8 @@ def create():
     """Criar novo quiz"""
 
     if request.method == 'POST':
+        db = current_app.extensions['sqlalchemy']
+        
         # Obter dados do formulário
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
@@ -110,6 +111,7 @@ def edit(quiz_id):
     quiz_obj = Quiz.query.get_or_404(quiz_id)
 
     if request.method == 'POST':
+        db = current_app.extensions['sqlalchemy']
         action = request.form.get('action', 'update_quiz')
 
         if action == 'update_quiz':
@@ -238,7 +240,8 @@ def edit(quiz_id):
 @admin_or_moderator_required
 def delete_question(question_id):
     """Excluir questão"""
-
+    db = current_app.extensions['sqlalchemy']
+    
     question = Question.query.get_or_404(question_id)
     quiz_obj = question.quiz
 
@@ -355,7 +358,8 @@ def submit_answer(quiz_id):
 @login_required
 def finish(quiz_id):
     """Finalizar quiz e salvar resultado"""
-
+    db = current_app.extensions['sqlalchemy']
+    
     game_key = f'quiz_game_{quiz_id}'
 
     if game_key not in session:
