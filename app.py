@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, redirect, url_for, flash
+from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
@@ -132,15 +132,18 @@ def create_admin_user():
         print("⚠️  IMPORTANTE: Altere esta senha após o primeiro login!")
 
 
-@app.before_first_request
-def initialize_app():
-    """Executado apenas na primeira vez que o app roda"""
+# ================================
+# INICIALIZAÇÃO - COMPATÍVEL COM FLASK 3.0+
+# ================================
+
+with app.app_context():
+    """Executado quando o app é inicializado"""
     # Criar todas as tabelas do banco
     db.create_all()
-
+    
     # Criar usuário admin padrão
     create_admin_user()
-
+    
     print("🚀 Brainchild inicializado com sucesso!")
 
 
