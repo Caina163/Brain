@@ -30,11 +30,15 @@ user = Blueprint('user', __name__)
 def profile():
     """Perfil do usuário atual"""
 
-    # Estatísticas pessoais
-    user_stats = current_user.get_quiz_stats()
+    # Estatísticas pessoais (versão simplificada)
+    user_stats = {
+        'user_type': current_user.user_type,
+        'created_at': current_user.created_at,
+        'is_approved': current_user.is_approved
+    }
 
     # Atividade recente
-    if current_user.is_student:
+    if current_user.user_type == 'student':
         recent_activity = (QuizResult.query
                            .filter_by(user_id=current_user.id)
                            .join(Quiz)
@@ -124,7 +128,7 @@ def edit_profile():
 
             # Atualizar senha se fornecida
             if new_password:
-                current_user.set_password(new_password)
+                current_user.password_hash = generate_password_hash(new_password)
 
             db.session.commit()
             flash('Perfil atualizado com sucesso!', 'success')
@@ -204,11 +208,11 @@ def promote_user(user_id):
         flash('Você não pode alterar seu próprio tipo de usuário.', 'error')
         return redirect(url_for('user.manage_users'))
 
-    if target_user.is_student:
+    if target_user.user_type == 'student':
         try:
-            target_user.promote_to_moderator()
+            target_user.user_type = 'moderator'
             db.session.commit()
-            flash(f'{target_user.full_name} promovido a moderador!', 'success')
+            flash(f'{target_user.first_name} {target_user.last_name} promovido a moderador!', 'success')
         except Exception as e:
             db.session.rollback()
             flash('Erro ao promover usuário.', 'error')
@@ -232,11 +236,11 @@ def demote_user(user_id):
         flash('Você não pode alterar seu próprio tipo de usuário.', 'error')
         return redirect(url_for('user.manage_users'))
 
-    if target_user.is_moderator:
+    if target_user.user_type == 'moderator':
         try:
-            target_user.demote_to_student()
+            target_user.user_type = 'student'
             db.session.commit()
-            flash(f'{target_user.full_name} rebaixado a aluno!', 'success')
+            flash(f'{target_user.first_name} {target_user.last_name} rebaixado a aluno!', 'success')
         except Exception as e:
             db.session.rollback()
             flash('Erro ao rebaixar usuário.', 'error')
@@ -254,4 +258,100 @@ def toggle_approval(user_id):
     """Alternar aprovação do usuário"""
     db = current_app.extensions['sqlalchemy']
     
-    target_user = User
+    target_user = User.query.get_or_404(user_id)
+
+    if target_user.id == current_user.id:
+        flash('Você não pode alterar sua própria aprovação.', 'error')
+        return redirect(url_for('user.manage_users'))
+
+    try:
+        if target_user.is_approved:
+            target_user.is_approved = False
+            action = 'desaprovado'
+        else:
+            target_user.is_approved = True
+            action = 'aprovado'
+
+        db.session.commit()
+        flash(f'{target_user.first_name} {target_user.last_name} {action} com sucesso!', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash('Erro ao alterar aprovação.', 'error')
+        print(f"Erro ao alterar aprovação: {e}")
+
+    return redirect(url_for('user.manage_users'))
+
+
+@user.route('/delete/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_user(user_id):
+    """Excluir usuário (apenas admin)"""
+    db = current_app.extensions['sqlalchemy']
+    
+    target_user = User.query.get_or_404(user_id)
+
+    if target_user.id == current_user.id:
+        flash('Você não pode excluir sua própria conta.', 'error')
+        return redirect(url_for('user.manage_users'))
+
+    if target_user.user_type == 'admin':
+        flash('Não é possível excluir outro administrador.', 'error')
+        return redirect(url_for('user.manage_users'))
+
+    user_name = f'{target_user.first_name} {target_user.last_name}'
+
+    try:
+        # Excluir usuário
+        db.session.delete(target_user)
+        db.session.commit()
+
+        flash(f'Usuário {user_name} excluído com sucesso.', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash('Erro ao excluir usuário.', 'error')
+        print(f"Erro ao excluir usuário: {e}")
+
+    return redirect(url_for('user.manage_users'))
+
+
+@user.route('/export')
+@login_required
+@admin_required
+def export_users():
+    """Exportar lista de usuários (CSV)"""
+
+    # Criar CSV em memória
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Cabeçalho
+    writer.writerow(['ID', 'Username', 'Nome', 'Email', 'Tipo', 'Aprovado', 'Data Criação'])
+
+    # Dados dos usuários
+    users = User.query.order_by(User.created_at.desc()).all()
+    for user_obj in users:
+        user_type_display = {
+            'admin': 'Administrador',
+            'moderator': 'Moderador', 
+            'student': 'Aluno'
+        }.get(user_obj.user_type, user_obj.user_type)
+        
+        writer.writerow([
+            user_obj.id,
+            user_obj.username,
+            f'{user_obj.first_name} {user_obj.last_name}',
+            user_obj.email,
+            user_type_display,
+            'Sim' if user_obj.is_approved else 'Não',
+            user_obj.created_at.strftime('%d/%m/%Y %H:%M')
+        ])
+
+    # Criar resposta
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = 'attachment; filename=usuarios_brainchild.csv'
+
+    return response
