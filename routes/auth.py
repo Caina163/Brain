@@ -10,10 +10,9 @@ Responsável por:
 - Gerenciamento de cadastros pendentes
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
-from app import db
 from models.user import User
 from utils.decorators import admin_or_moderator_required, admin_required
 from utils.helpers import validate_email, validate_password
@@ -140,6 +139,8 @@ def register():
 
         # Criar novo usuário (pendente de aprovação)
         try:
+            from flask import current_app
+            
             new_user = User(
                 username=username,
                 email=email,
@@ -151,14 +152,14 @@ def register():
                 is_approved=False  # Precisa de aprovação
             )
 
-            db.session.add(new_user)
-            db.session.commit()
+            current_app.extensions['sqlalchemy'].session.add(new_user)
+            current_app.extensions['sqlalchemy'].session.commit()
 
             flash('Cadastro realizado com sucesso! Aguarde a aprovação de um administrador.', 'success')
             return redirect(url_for('auth.login'))
 
         except Exception as e:
-            db.session.rollback()
+            current_app.extensions['sqlalchemy'].session.rollback()
             flash('Erro interno. Tente novamente mais tarde.', 'error')
             print(f"Erro no registro: {e}")
 
@@ -197,7 +198,7 @@ def approve_user(user_id):
 
     # Aprovar usuário
     user.is_approved = True
-    db.session.commit()
+    current_app.extensions['sqlalchemy'].session.commit()
 
     flash(f'Usuário {user.full_name} aprovado com sucesso!', 'success')
     return redirect(url_for('auth.pending_users'))
@@ -217,11 +218,11 @@ def reject_user(user_id):
     user_name = user.full_name
 
     try:
-        db.session.delete(user)
-        db.session.commit()
+        current_app.extensions['sqlalchemy'].session.delete(user)
+        current_app.extensions['sqlalchemy'].session.commit()
         flash(f'Cadastro de {user_name} rejeitado e removido.', 'info')
     except Exception as e:
-        db.session.rollback()
+        current_app.extensions['sqlalchemy'].session.rollback()
         flash('Erro ao rejeitar usuário.', 'error')
         print(f"Erro ao rejeitar usuário: {e}")
 
@@ -251,12 +252,12 @@ def bulk_approve():
             user.is_approved = True
             approved_count += 1
 
-        db.session.commit()
+        current_app.extensions['sqlalchemy'].session.commit()
 
         flash(f'{approved_count} usuário(s) aprovado(s) com sucesso!', 'success')
 
     except Exception as e:
-        db.session.rollback()
+        current_app.extensions['sqlalchemy'].session.rollback()
         flash('Erro ao aprovar usuários em lote.', 'error')
         print(f"Erro na aprovação em lote: {e}")
 
