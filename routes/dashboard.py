@@ -10,10 +10,9 @@ Responsável por:
 - Estatísticas e resumos personalizados
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import func, desc
-from app import db
 from models.user import User, QuizResult
 from models.quiz import Quiz
 from models.question import Question
@@ -47,6 +46,7 @@ def index():
 @admin_required
 def admin():
     """Dashboard do administrador"""
+    db = current_app.extensions['sqlalchemy']
 
     # Estatísticas gerais do sistema
     stats = {
@@ -156,6 +156,7 @@ def moderator():
 @approved_user_required
 def student():
     """Dashboard do aluno"""
+    db = current_app.extensions['sqlalchemy']
 
     # Estatísticas pessoais
     my_results = QuizResult.query.filter_by(user_id=current_user.id).all()
@@ -248,71 +249,6 @@ def student():
                            recommended_quizzes=recommended_quizzes,
                            ranking_position=ranking_position,
                            total_students=total_students)
-
-
-@dashboard.route('/stats')
-@login_required
-@approved_user_required
-def stats():
-    """Página de estatísticas detalhadas"""
-
-    # Redirecionar baseado no tipo de usuário
-    if current_user.is_admin:
-        return redirect(url_for('dashboard.admin_stats'))
-    elif current_user.is_moderator:
-        return redirect(url_for('dashboard.moderator_stats'))
-    else:
-        return redirect(url_for('dashboard.student_stats'))
-
-
-@dashboard.route('/admin/stats')
-@login_required
-@admin_required
-def admin_stats():
-    """Estatísticas detalhadas para administrador"""
-
-    # Estatísticas por período
-    periods = ['7', '30', '90', '365']
-    period_stats = {}
-
-    for days in periods:
-        start_date = datetime.utcnow() - timedelta(days=int(days))
-        period_stats[days] = {
-            'new_users': User.query.filter(User.created_at >= start_date).count(),
-            'new_quizzes': Quiz.query.filter(Quiz.created_at >= start_date).count(),
-            'quiz_plays': QuizResult.query.filter(QuizResult.completed_at >= start_date).count()
-        }
-
-    # Top performers
-    top_students = (db.session.query(
-        User,
-        func.count(QuizResult.id).label('total_plays'),
-        func.avg(QuizResult.score * 100 / QuizResult.total_questions).label('avg_score')
-    )
-                    .join(QuizResult)
-                    .filter(User.user_type == 'student')
-                    .group_by(User.id)
-                    .order_by(desc('avg_score'))
-                    .limit(10)
-                    .all())
-
-    # Top quiz creators
-    top_creators = (db.session.query(
-        User,
-        func.count(Quiz.id).label('quiz_count'),
-        func.sum(func.coalesce(func.count(QuizResult.id), 0)).label('total_plays')
-    )
-                    .join(Quiz, User.id == Quiz.created_by)
-                    .outerjoin(QuizResult, Quiz.id == QuizResult.quiz_id)
-                    .group_by(User.id)
-                    .order_by(desc('quiz_count'))
-                    .limit(10)
-                    .all())
-
-    return render_template('dashboard/admin_stats.html',
-                           period_stats=period_stats,
-                           top_students=top_students,
-                           top_creators=top_creators)
 
 
 @dashboard.route('/api/chart-data/<chart_type>')
