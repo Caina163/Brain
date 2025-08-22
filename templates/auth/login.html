@@ -4,330 +4,264 @@
 
 {% block extra_head %}
 <style>
-    .auth-wrapper {
-        min-height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+}
+
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.login-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.logo-section {
+    margin-bottom: 30px;
+}
+
+.brain-icon {
+    font-size: 60px;
+    margin-bottom: 10px;
+}
+
+.app-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 5px 0;
+}
+
+.app-subtitle {
+    color: #666;
+    font-size: 16px;
+    margin: 0 0 30px 0;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-control {
+    width: 100%;
+    padding: 15px 20px;
+    border: 2px solid #e1e5e9;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-control::placeholder {
+    color: #999;
+}
+
+.remember-section {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.remember-section input {
+    margin-right: 8px;
+}
+
+.remember-section label {
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-login {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.btn-login:active {
+    transform: translateY(0);
+}
+
+.divider {
+    margin: 20px 0;
+    color: #999;
+    font-size: 14px;
+}
+
+.register-link {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.register-link:hover {
+    text-decoration: underline;
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #b6d7ff;
+}
+
+@media (max-width: 768px) {
+    .login-card {
+        padding: 30px 20px;
+        margin: 10px;
     }
-
-    .auth-card {
-        background: white;
-        border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        overflow: hidden;
-        max-width: 900px;
-        width: 100%;
+    
+    .app-title {
+        font-size: 28px;
     }
-
-    .auth-content {
-        padding: 60px 40px;
+    
+    .brain-icon {
+        font-size: 50px;
     }
-
-    .auth-header {
-        text-align: center;
-        margin-bottom: 40px;
-    }
-
-    .logo {
-        font-size: 4rem;
-        margin-bottom: 20px;
-    }
-
-    .brand-name {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #2c3e50;
-        margin-bottom: 10px;
-    }
-
-    .brand-subtitle {
-        color: #7f8c8d;
-        font-size: 1.1rem;
-    }
-
-    .form-floating {
-        margin-bottom: 20px;
-    }
-
-    .form-floating input {
-        border-radius: 12px;
-        border: 2px solid #e9ecef;
-        padding: 20px 15px;
-        height: auto;
-    }
-
-    .form-floating input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
-
-    .btn-login {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        border-radius: 12px;
-        padding: 15px;
-        font-weight: 600;
-        font-size: 1.1rem;
-        width: 100%;
-        margin-top: 20px;
-    }
-
-    .btn-login:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-    }
-
-    .divider {
-        text-align: center;
-        margin: 30px 0;
-        position: relative;
-    }
-
-    .divider::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: #e9ecef;
-    }
-
-    .divider span {
-        background: white;
-        padding: 0 20px;
-        color: #7f8c8d;
-    }
-
-    .register-link {
-        text-align: center;
-        margin-top: 30px;
-    }
-
-    .register-link a {
-        color: #667eea;
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-    .register-link a:hover {
-        text-decoration: underline;
-    }
-
-    .features {
-        background: #f8f9fa;
-        padding: 60px 40px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    .feature-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 30px;
-    }
-
-    .feature-icon {
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 15px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 20px;
-        color: white;
-        font-size: 1.5rem;
-    }
-
-    .feature-text h5 {
-        margin-bottom: 5px;
-        color: #2c3e50;
-    }
-
-    .feature-text p {
-        margin: 0;
-        color: #7f8c8d;
-    }
-
-    @media (max-width: 768px) {
-        .auth-content {
-            padding: 40px 20px;
-        }
-
-        .features {
-            display: none;
-        }
-
-        .brand-name {
-            font-size: 2rem;
-        }
-
-        .logo {
-            font-size: 3rem;
-        }
-    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="auth-wrapper">
-    <div class="auth-card">
-        <div class="row g-0">
-            <!-- Login Form -->
-            <div class="col-lg-6">
-                <div class="auth-content">
-                    <div class="auth-header">
-                        <div class="logo">🧠</div>
-                        <h1 class="brand-name">Brainchild</h1>
-                        <p class="brand-subtitle">Sistema de Quiz Inteligente</p>
-                    </div>
-
-                    <form method="POST" data-loading="true">
-                        <div class="form-floating">
-                            <input type="text" class="form-control" id="username" name="username"
-                                   placeholder="Nome de usuário ou email" required>
-                            <label for="username">
-                                <i class="bi bi-person me-2"></i>Nome de usuário ou email
-                            </label>
-                        </div>
-
-                        <div class="form-floating">
-                            <input type="password" class="form-control" id="password" name="password"
-                                   placeholder="Senha" required>
-                            <label for="password">
-                                <i class="bi bi-lock me-2"></i>Senha
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                            <label class="form-check-label" for="remember">
-                                Lembrar-me
-                            </label>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-login">
-                            <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
-                        </button>
-                    </form>
-
-                    <div class="divider">
-                        <span>ou</span>
-                    </div>
-
-                    <div class="register-link">
-                        <p>Não tem uma conta?
-                            <a href="{{ url_for('auth.register') }}">Cadastre-se aqui</a>
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Features -->
-            <div class="col-lg-6">
-                <div class="features">
-                    <div class="feature-item">
-                        <div class="feature-icon">
-                            <i class="bi bi-puzzle"></i>
-                        </div>
-                        <div class="feature-text">
-                            <h5>Quizzes Inteligentes</h5>
-                            <p>Crie e jogue quizzes com embaralhamento automático de respostas</p>
-                        </div>
-                    </div>
-
-                    <div class="feature-item">
-                        <div class="feature-icon">
-                            <i class="bi bi-people"></i>
-                        </div>
-                        <div class="feature-text">
-                            <h5>Sistema Hierárquico</h5>
-                            <p>Diferentes níveis de acesso: Administrador, Moderador e Aluno</p>
-                        </div>
-                    </div>
-
-                    <div class="feature-item">
-                        <div class="feature-icon">
-                            <i class="bi bi-graph-up"></i>
-                        </div>
-                        <div class="feature-text">
-                            <h5>Estatísticas Detalhadas</h5>
-                            <p>Acompanhe seu desempenho e evolução com relatórios completos</p>
-                        </div>
-                    </div>
-
-                    <div class="feature-item">
-                        <div class="feature-icon">
-                            <i class="bi bi-image"></i>
-                        </div>
-                        <div class="feature-text">
-                            <h5>Suporte a Imagens</h5>
-                            <p>Adicione imagens aos quizzes para torná-los mais visuais</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="login-container">
+    <div class="login-card">
+        <!-- Logo e Título -->
+        <div class="logo-section">
+            <div class="brain-icon">🧠</div>
+            <h1 class="app-title">Brainchild</h1>
+            <p class="app-subtitle">Sistema de Quiz Inteligente</p>
         </div>
+
+        <!-- Mensagens Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Formulário de Login -->
+        <form method="POST">
+            <div class="form-group">
+                <input type="text" 
+                       class="form-control" 
+                       name="username" 
+                       placeholder="👤 Nome de usuário ou email"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <input type="password" 
+                       class="form-control" 
+                       name="password" 
+                       placeholder="🔒 Senha"
+                       required>
+            </div>
+
+            <div class="remember-section">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Lembrar-me</label>
+            </div>
+
+            <button type="submit" class="btn-login">
+                🚀 Entrar
+            </button>
+        </form>
+
+        <!-- Divisor -->
+        <div class="divider">ou</div>
+
+        <!-- Link para Cadastro -->
+        <p>
+            Não tem uma conta? 
+            <a href="{{ url_for('auth.register') }}" class="register-link">
+                Cadastre-se aqui
+            </a>
+        </p>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Animação de entrada suave
 document.addEventListener('DOMContentLoaded', function() {
-    // Adicionar animações suaves aos inputs
-    const inputs = document.querySelectorAll('.form-floating input');
-
-    inputs.forEach(input => {
-        input.addEventListener('focus', function() {
-            this.parentElement.classList.add('focused');
-        });
-
-        input.addEventListener('blur', function() {
-            if (!this.value) {
-                this.parentElement.classList.remove('focused');
-            }
-        });
-    });
-
-    // Validação em tempo real
-    const form = document.querySelector('form');
-    const submitBtn = form.querySelector('button[type="submit"]');
-
-    form.addEventListener('input', function() {
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value;
-
-        if (username && password) {
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('disabled');
-        } else {
-            submitBtn.disabled = true;
-            submitBtn.classList.add('disabled');
-        }
-    });
-
-    // Animação de carregamento no submit
-    form.addEventListener('submit', function() {
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Entrando...';
-        submitBtn.disabled = true;
-    });
-
-    // Animação de entrada da página
-    const authCard = document.querySelector('.auth-card');
-    authCard.style.opacity = '0';
-    authCard.style.transform = 'translateY(50px)';
-
+    const card = document.querySelector('.login-card');
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(20px)';
+    
     setTimeout(() => {
-        authCard.style.transition = 'all 0.6s ease';
-        authCard.style.opacity = '1';
-        authCard.style.transform = 'translateY(0)';
+        card.style.transition = 'all 0.6s ease';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
     }, 100);
+});
+
+// Loading no botão ao submeter
+document.querySelector('form').addEventListener('submit', function() {
+    const btn = document.querySelector('.btn-login');
+    btn.innerHTML = '⏳ Entrando...';
+    btn.disabled = true;
 });
 </script>
 {% endblock %}
