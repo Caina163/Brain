@@ -148,30 +148,6 @@ with app.app_context():
 
 
 # ================================
-# TRATAMENTO DE ERROS
-# ================================
-
-@app.errorhandler(404)
-def not_found_error(error):
-    """Página não encontrada"""
-    return render_template('errors/404.html'), 404
-
-
-@app.errorhandler(500)
-def internal_error(error):
-    """Erro interno do servidor"""
-    db.session.rollback()
-    return render_template('errors/500.html'), 500
-
-
-@app.errorhandler(413)
-def file_too_large(error):
-    """Arquivo muito grande"""
-    flash('Arquivo muito grande. Tamanho máximo: 16MB', 'error')
-    return redirect(request.url)
-
-
-# ================================
 # PREPARAR DIRETÓRIOS NECESSÁRIOS
 # ================================
 
