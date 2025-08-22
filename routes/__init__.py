@@ -1,14 +1,12 @@
 """
 Rotas do Sistema Brainchild
 ===========================
-
 Este módulo contém todas as rotas organizadas por funcionalidade:
 - auth: Autenticação (login, registro, logout)
 - dashboard: Páginas principais por tipo de usuário
 - quiz: Criar, editar, jogar e gerenciar quizzes
 - user: Perfil e gerenciamento de usuários
 """
-
 from .auth import auth
 from .dashboard import dashboard
 from .quiz import quiz
