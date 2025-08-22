@@ -99,10 +99,17 @@ def index():
 @app.context_processor
 def inject_global_vars():
     """Disponibiliza variáveis em todos os templates"""
+    from models.user import User
+    
+    pending_count = 0
+    if current_user.is_authenticated and (current_user.user_type in ['admin', 'moderator']):
+        pending_count = User.query.filter_by(is_approved=False).count()
+    
     return {
         'current_user': current_user,
         'User': User,
-        'app_name': 'Brainchild'
+        'app_name': 'Brainchild',
+        'pending_users_count': pending_count
     }
 
 
