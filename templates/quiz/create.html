@@ -39,10 +39,10 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-4">
-                                <label for="title" class="form-label">Título do Quiz *</label>
+                                <label for="quiz-title" class="form-label">Título do Quiz *</label>
                                 <input type="text"
                                        class="form-control form-control-lg"
-                                       id="title"
+                                       id="quiz-title"
                                        name="title"
                                        placeholder="Digite um título atrativo para seu quiz"
                                        required
@@ -50,9 +50,9 @@
                             </div>
 
                             <div class="mb-4">
-                                <label for="description" class="form-label">Descrição (opcional)</label>
+                                <label for="quiz-description" class="form-label">Descrição (opcional)</label>
                                 <textarea class="form-control"
-                                          id="description"
+                                          id="quiz-description"
                                           name="description"
                                           rows="3"
                                           placeholder="Descreva brevemente o conteúdo do quiz..."
@@ -190,7 +190,7 @@
                             </div>
 
                             <div class="mt-3 pt-3 border-top">
-                                <button type="submit" class="btn btn-success w-100" id="finalSubmit" disabled>
+                                <button type="button" class="btn btn-success w-100" id="finalize-quiz" disabled>
                                     <i class="bi bi-save me-2"></i>Finalizar Quiz
                                 </button>
                                 <div class="form-text text-center mt-2">
@@ -232,6 +232,18 @@
                 </button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle-fill me-2 toast-icon"></i>
+            <strong class="me-auto toast-title">Notificação</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toast-message"></div>
     </div>
 </div>
 {% endblock %}
@@ -374,7 +386,6 @@
     border: 2px solid #dee2e6;
 }
 
-/* Animação para o modal */
 .modal.fade .modal-dialog {
     transform: translate(0, -50px);
     transition: transform 0.3s ease-out;
@@ -382,6 +393,18 @@
 
 .modal.show .modal-dialog {
     transform: translate(0, 0);
+}
+
+.toast-icon.text-success {
+    color: #198754 !important;
+}
+
+.toast-icon.text-danger {
+    color: #dc3545 !important;
+}
+
+.toast-icon.text-warning {
+    color: #ffc107 !important;
 }
 </style>
 {% endblock %}
@@ -392,6 +415,38 @@ let currentQuestion = 1;
 let questions = {};
 let questionCounter = 1;
 let questionToDelete = null;
+
+// ✅ FUNÇÃO DE TOAST MELHORADA
+function showToast(message, type = 'info') {
+    const toastElement = document.getElementById('liveToast');
+    const toastIcon = document.querySelector('.toast-icon');
+    const toastTitle = document.querySelector('.toast-title');
+    const toastMessage = document.getElementById('toast-message');
+    
+    // Configurar ícone e cor baseado no tipo
+    switch(type) {
+        case 'success':
+            toastIcon.className = 'bi bi-check-circle-fill me-2 toast-icon text-success';
+            toastTitle.textContent = 'Sucesso';
+            break;
+        case 'error':
+            toastIcon.className = 'bi bi-exclamation-triangle-fill me-2 toast-icon text-danger';
+            toastTitle.textContent = 'Erro';
+            break;
+        case 'warning':
+            toastIcon.className = 'bi bi-exclamation-triangle-fill me-2 toast-icon text-warning';
+            toastTitle.textContent = 'Atenção';
+            break;
+        default:
+            toastIcon.className = 'bi bi-info-circle-fill me-2 toast-icon text-primary';
+            toastTitle.textContent = 'Informação';
+    }
+    
+    toastMessage.textContent = message;
+    
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize first question
@@ -424,7 +479,7 @@ function setupEventListeners() {
     });
 
     // Form validation
-    document.getElementById('title').addEventListener('input', validateStep1);
+    document.getElementById('quiz-title').addEventListener('input', validateStep1);
 
     // Modal de confirmação
     document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
@@ -433,19 +488,89 @@ function setupEventListeners() {
             bootstrap.Modal.getInstance(document.getElementById('deleteQuestionModal')).hide();
         }
     });
+
+    // ✅ BOTÃO FINALIZAR CORRIGIDO
+    document.getElementById('finalize-quiz').addEventListener('click', function() {
+        console.log('=== FINALIZANDO QUIZ ===');
+        
+        // Capturar dados básicos
+        const title = document.getElementById('quiz-title').value.trim();
+        const description = document.getElementById('quiz-description').value.trim();
+        
+        console.log('Title:', title);
+        console.log('Description:', description);
+        
+        // ✅ VALIDAR APENAS TÍTULO (descrição é opcional)
+        if (!title) {
+            showToast('Título é obrigatório!', 'error');
+            return;
+        }
+        
+        // Validar questões salvas
+        const savedQuestions = Object.values(questions).filter(q => q.saved);
+        console.log('Saved questions:', savedQuestions.length);
+        
+        if (savedQuestions.length === 0) {
+            showToast('Salve pelo menos uma questão antes de finalizar!', 'warning');
+            return;
+        }
+
+        // Preparar dados das questões
+        const questionsArray = [];
+        Object.values(questions).forEach(question => {
+            if (question.saved) {
+                const answers = [];
+                
+                // Adicionar resposta correta
+                answers.push({
+                    text: question.correctAnswer,
+                    isCorrect: true
+                });
+                
+                // Adicionar respostas incorretas
+                question.wrongAnswers.forEach(wrongAnswer => {
+                    if (wrongAnswer.trim()) {
+                        answers.push({
+                            text: wrongAnswer.trim(),
+                            isCorrect: false
+                        });
+                    }
+                });
+                
+                questionsArray.push({
+                    question: question.text,
+                    type: 'multiple_choice',
+                    answers: answers
+                });
+            }
+        });
+
+        console.log('Questions array:', questionsArray);
+
+        // ✅ COLOCAR DADOS NO CAMPO HIDDEN
+        document.getElementById('questions_data_input').value = JSON.stringify(questionsArray);
+
+        // ✅ MOSTRAR LOADING NO BOTÃO
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+        this.disabled = true;
+
+        // ✅ SUBMIT DO FORMULÁRIO
+        console.log('Submetendo formulário...');
+        document.getElementById('quizForm').submit();
+    });
 }
 
 function validateStep1() {
-    const title = document.getElementById('title').value.trim();
+    const title = document.getElementById('quiz-title').value.trim();
     const nextBtn = document.getElementById('nextToStep2');
 
     nextBtn.disabled = title.length < 3;
 }
 
 function goToStep2() {
-    const title = document.getElementById('title').value.trim();
+    const title = document.getElementById('quiz-title').value.trim();
     if (title.length < 3) {
-        alert('Por favor, preencha o título do quiz');
+        showToast('Por favor, preencha o título do quiz', 'error');
         return;
     }
 
@@ -465,7 +590,6 @@ function goToStep1() {
 }
 
 function confirmDeleteQuestion(questionNum) {
-    // Evitar que o clique no botão delete acione o selectQuestion
     event.stopPropagation();
     
     const question = questions[questionNum];
@@ -480,35 +604,30 @@ function confirmDeleteQuestion(questionNum) {
 }
 
 function deleteQuestion(questionNum) {
-    // Não permitir excluir se for a única questão
     const totalQuestions = Object.keys(questions).length;
     if (totalQuestions <= 1) {
-        alert('Deve haver pelo menos uma questão no quiz');
+        showToast('Deve haver pelo menos uma questão no quiz', 'warning');
         return;
     }
 
-    // Remover questão dos dados
     delete questions[questionNum];
 
-    // Remover do DOM
     const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
     questionItem.remove();
 
-    // Se era a questão atual, selecionar outra
     if (currentQuestion === questionNum) {
         const remainingQuestions = Object.keys(questions).map(Number).sort((a, b) => a - b);
         currentQuestion = remainingQuestions[0];
         selectQuestion(currentQuestion);
     }
 
-    // Atualizar contador
     updateQuestionCounter();
 
-    // Verificar se ainda tem questões salvas para habilitar submit
     const hasEnoughSavedQuestions = Object.values(questions).some(q => q.saved);
-    document.getElementById('finalSubmit').disabled = !hasEnoughSavedQuestions;
+    document.getElementById('finalize-quiz').disabled = !hasEnoughSavedQuestions;
 
     questionToDelete = null;
+    showToast('Questão removida com sucesso!', 'success');
 }
 
 function saveCurrentQuestion() {
@@ -519,21 +638,20 @@ function saveCurrentQuestion() {
         .filter(answer => answer.length > 0);
 
     if (!questionText) {
-        alert('Por favor, digite o texto da questão');
+        showToast('Por favor, digite o texto da questão', 'error');
         return;
     }
 
     if (!correctAnswer) {
-        alert('Por favor, digite a resposta correta');
+        showToast('Por favor, digite a resposta correta', 'error');
         return;
     }
 
     if (wrongAnswers.length === 0) {
-        alert('Por favor, adicione pelo menos uma resposta incorreta');
+        showToast('Por favor, adicione pelo menos uma resposta incorreta', 'error');
         return;
     }
 
-    // Save question data
     questions[currentQuestion] = {
         image: document.getElementById('questionImage').files[0] || null,
         text: questionText,
@@ -542,20 +660,16 @@ function saveCurrentQuestion() {
         saved: true
     };
 
-    // Update question item in sidebar
     updateQuestionItem(currentQuestion);
+    document.getElementById('finalize-quiz').disabled = !Object.values(questions).some(q => q.saved);
 
-    // Enable submit button if at least one question is saved
-    document.getElementById('finalSubmit').disabled = !Object.values(questions).some(q => q.saved);
-
-    alert('Questão salva com sucesso!');
+    showToast('Questão salva com sucesso!', 'success');
 }
 
 function addNewQuestion() {
     questionCounter++;
     currentQuestion = questionCounter;
 
-    // Add new question to data
     questions[currentQuestion] = {
         image: null,
         text: '',
@@ -564,19 +678,13 @@ function addNewQuestion() {
         saved: false
     };
 
-    // Add to sidebar
     addQuestionToSidebar(currentQuestion);
-
-    // Clear form
     clearQuestionForm();
-
-    // Update UI
     updateQuestionCounter();
     selectQuestion(currentQuestion);
 }
 
 function selectQuestion(questionNum) {
-    // Save current question first if it has content
     const currentText = document.getElementById('questionText').value.trim();
     if (currentText && questions[currentQuestion]) {
         questions[currentQuestion].text = currentText;
@@ -588,16 +696,12 @@ function selectQuestion(questionNum) {
 
     currentQuestion = questionNum;
 
-    // Update active question in sidebar
     document.querySelectorAll('.question-item').forEach(item => {
         item.classList.remove('active');
     });
     document.querySelector(`[data-question="${questionNum}"]`).classList.add('active');
 
-    // Load question data
     loadQuestionData(questionNum);
-
-    // Update UI
     updateQuestionCounter();
     document.getElementById('currentQuestionTitle').textContent = `Questão ${questionNum}`;
 }
@@ -608,7 +712,6 @@ function loadQuestionData(questionNum) {
     document.getElementById('questionText').value = question.text || '';
     document.getElementById('correctAnswer').value = question.correctAnswer || '';
 
-    // Load wrong answers
     const container = document.getElementById('wrongAnswersContainer');
     container.innerHTML = '';
 
@@ -617,7 +720,6 @@ function loadQuestionData(questionNum) {
         addWrongAnswerField(answer);
     });
 
-    // Clear image preview
     document.getElementById('question-image-preview').innerHTML = '';
     document.getElementById('questionImage').value = '';
 }
@@ -689,7 +791,7 @@ function addWrongAnswerField(value = '') {
     const wrongAnswerCount = container.children.length;
 
     if (wrongAnswerCount >= 5) {
-        alert('Máximo de 5 respostas incorretas por questão');
+        showToast('Máximo de 5 respostas incorretas por questão', 'warning');
         return;
     }
 
@@ -712,7 +814,7 @@ function addWrongAnswerField(value = '') {
 function removeWrongAnswer(button) {
     const container = document.getElementById('wrongAnswersContainer');
     if (container.children.length <= 1) {
-        alert('Deve haver pelo menos uma resposta incorreta');
+        showToast('Deve haver pelo menos uma resposta incorreta', 'warning');
         return;
     }
 
@@ -727,13 +829,13 @@ function showImagePreview(input, containerId) {
 
     if (file) {
         if (!file.type.startsWith('image/')) {
-            alert('Por favor, selecione apenas arquivos de imagem');
+            showToast('Por favor, selecione apenas arquivos de imagem', 'error');
             input.value = '';
             return;
         }
 
         if (file.size > 16 * 1024 * 1024) {
-            alert('Arquivo muito grande. Máximo 16MB');
+            showToast('Arquivo muito grande. Máximo 16MB', 'error');
             input.value = '';
             return;
         }
@@ -757,81 +859,5 @@ function removeImage(containerId, inputId) {
     document.getElementById(containerId).innerHTML = '';
     document.getElementById(inputId).value = '';
 }
-
-// ✅ FORM SUBMISSION COMPLETAMENTE CORRIGIDO!
-document.getElementById('quizForm').addEventListener('submit', function(e) {
-    e.preventDefault(); // Prevenir submit padrão para validar primeiro
-    
-    console.log('=== DEBUGGING FORM SUBMISSION ===');
-    
-    // ✅ VALIDAR CAMPOS BÁSICOS
-    const title = document.getElementById('title').value.trim();
-    const description = document.getElementById('description').value.trim();
-    
-    console.log('Title:', title);
-    console.log('Description:', description);
-    
-    if (!title) {
-        alert('Por favor, preencha o título do quiz');
-        return;
-    }
-    
-    // ✅ VALIDAR QUESTÕES SALVAS
-    const savedQuestions = Object.values(questions).filter(q => q.saved);
-    console.log('Saved questions:', savedQuestions.length);
-    
-    if (savedQuestions.length === 0) {
-        alert('Por favor, salve pelo menos uma questão antes de finalizar');
-        return;
-    }
-
-    // ✅ PREPARAR DADOS NO FORMATO CORRETO PARA O SERVIDOR
-    const questionsArray = [];
-    Object.values(questions).forEach(question => {
-        if (question.saved) {
-            // ✅ FORMATO ESPERADO PELO SERVIDOR
-            const answers = [];
-            
-            // Adicionar resposta correta
-            answers.push({
-                text: question.correctAnswer,
-                isCorrect: true
-            });
-            
-            // Adicionar respostas incorretas
-            question.wrongAnswers.forEach(wrongAnswer => {
-                if (wrongAnswer.trim()) {
-                    answers.push({
-                        text: wrongAnswer.trim(),
-                        isCorrect: false
-                    });
-                }
-            });
-            
-            questionsArray.push({
-                question: question.text,  // ✅ Campo 'question', não 'text'
-                type: 'multiple_choice',
-                answers: answers
-            });
-        }
-    });
-
-    console.log('Questions array:', questionsArray);
-
-    // ✅ COLOCAR DADOS NO CAMPO HIDDEN
-    document.getElementById('questions_data_input').value = JSON.stringify(questionsArray);
-    console.log('Hidden field value:', document.getElementById('questions_data_input').value);
-
-    // ✅ MOSTRAR LOADING
-    const submitBtn = document.getElementById('finalSubmit');
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-    submitBtn.disabled = true;
-
-    // ✅ FAZER SUBMIT REAL DO FORMULÁRIO
-    console.log('Submitting form...');
-    setTimeout(() => {
-        this.submit(); // FAZ O POST REAL PARA O SERVIDOR!
-    }, 500);
-});
 </script>
 {% endblock %}
