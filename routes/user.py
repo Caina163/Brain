@@ -317,6 +317,58 @@ def delete_user(user_id):
     return redirect(url_for('user.manage_users'))
 
 
+@user.route('/bulk_action', methods=['POST'])
+@login_required
+@admin_required
+def bulk_action():
+    """Ações em lote para usuários via JSON"""
+    db = current_app.extensions['sqlalchemy']
+    
+    data = request.get_json()
+    action = data.get('action')
+    user_ids = data.get('user_ids', [])
+
+    if not user_ids:
+        return jsonify({'success': False, 'message': 'Nenhum usuário selecionado'}), 400
+
+    try:
+        user_ids = [int(uid) for uid in user_ids if uid != str(current_user.id)]
+        users = User.query.filter(User.id.in_(user_ids)).all()
+
+        count = 0
+
+        if action == 'approve':
+            for user_obj in users:
+                if not user_obj.is_approved:
+                    user_obj.is_approved = True
+                    count += 1
+
+        elif action == 'promote':
+            for user_obj in users:
+                if user_obj.user_type == 'student':
+                    user_obj.user_type = 'moderator'
+                    count += 1
+
+        elif action == 'demote':
+            for user_obj in users:
+                if user_obj.user_type == 'moderator':
+                    user_obj.user_type = 'student'
+                    count += 1
+
+        elif action == 'delete':
+            for user_obj in users:
+                if user_obj.user_type != 'admin':
+                    db.session.delete(user_obj)
+                    count += 1
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'{count} usuários processados'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Erro ao processar ação'}), 500
+
+
 @user.route('/export')
 @login_required
 @admin_required
