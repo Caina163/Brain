@@ -43,17 +43,17 @@ def create():
         
         # Pegar dados do formulário
         title = request.form.get('title')
-        description = request.form.get('description')
+        description = request.form.get('description', '')  # ✅ CORREÇÃO: Valor padrão vazio
         questions_json = request.form.get('questions_data')
         
         print(f"DEBUG: title={title}")
         print(f"DEBUG: description={description}")
         print(f"DEBUG: questions_json presente: {bool(questions_json)}")
         
-        # Validar dados básicos
-        if not title or not description:
-            print("DEBUG: Erro - título ou descrição vazios")
-            flash('Título e descrição são obrigatórios.', 'error')
+        # ✅ CORREÇÃO: Validar apenas título como obrigatório
+        if not title:
+            print("DEBUG: Erro - título vazio")
+            flash('Título é obrigatório.', 'error')
             return render_template('quiz/create.html')
         
         if not questions_json:
@@ -91,12 +91,11 @@ def create():
         
         print("DEBUG: Criando objeto Quiz...")
         
-        # ✅ CORREÇÃO: Usar campos que existem no banco (is_active, is_deleted, is_archived)
+        # ✅ CORREÇÃO: Remover campo is_active que não existe no modelo
         new_quiz = Quiz(
             title=title,
             description=description,
             created_by=current_user.id,
-            is_active=True,      # ✅ Campo que existe
             is_deleted=False,    # ✅ Campo que existe  
             is_archived=False    # ✅ Campo que existe
         )
@@ -524,9 +523,9 @@ def manage():
     # Query base - quizzes do usuário atual
     query = Quiz.query.filter_by(created_by=current_user.id)
     
-    # ✅ CORREÇÃO: Usar campos que existem no banco (is_active, is_deleted, is_archived)
+    # ✅ CORREÇÃO: Usar apenas campos que existem no banco
     if status_filter == 'active':
-        query = query.filter_by(is_active=True, is_deleted=False, is_archived=False)
+        query = query.filter_by(is_deleted=False, is_archived=False)
     elif status_filter == 'archived':
         query = query.filter_by(is_archived=True, is_deleted=False)
     elif status_filter == 'deleted':
@@ -567,9 +566,8 @@ def archive(quiz_id):
 
     try:
         db = current_app.extensions['sqlalchemy']
-        # ✅ Usar campos que existem no banco
+        # ✅ Usar apenas campos que existem no banco
         quiz_obj.is_archived = True
-        quiz_obj.is_active = False
         db.session.commit()
         flash('Quiz arquivado com sucesso!', 'success')
     except Exception as e:
@@ -595,9 +593,8 @@ def delete(quiz_id):
 
     try:
         db = current_app.extensions['sqlalchemy']
-        # ✅ Usar campos que existem no banco
+        # ✅ Usar apenas campos que existem no banco
         quiz_obj.is_deleted = True
-        quiz_obj.is_active = False
         db.session.commit()
         flash('Quiz excluído com sucesso!', 'success')
     except Exception as e:
@@ -623,8 +620,7 @@ def restore(quiz_id):
 
     try:
         db = current_app.extensions['sqlalchemy']
-        # ✅ Usar campos que existem no banco
-        quiz_obj.is_active = True
+        # ✅ Usar apenas campos que existem no banco
         quiz_obj.is_deleted = False
         quiz_obj.is_archived = False
         db.session.commit()
