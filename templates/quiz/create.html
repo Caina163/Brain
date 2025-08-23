@@ -4,10 +4,10 @@
 
 {% block content %}
 <div class="container py-4">
-    <!-- Header -->
+    <!-- Header com botão voltar melhorado -->
     <div class="d-flex align-items-center mb-4">
         <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary me-3">
-            <i class="bi bi-arrow-left"></i>
+            <i class="bi bi-arrow-left me-1"></i>Voltar ao Dashboard
         </a>
         <div>
             <h1 class="h3 mb-1">Criar Novo Quiz</h1>
@@ -175,8 +175,16 @@
                                 <div class="question-item active" data-question="1" onclick="selectQuestion(1)">
                                     <div class="question-number">01</div>
                                     <div class="question-preview">Nova questão</div>
-                                    <div class="question-status">
-                                        <i class="bi bi-circle text-warning"></i>
+                                    <div class="question-actions">
+                                        <div class="question-status">
+                                            <i class="bi bi-circle text-warning"></i>
+                                        </div>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger delete-question-btn" 
+                                                onclick="confirmDeleteQuestion(1)"
+                                                title="Excluir questão">
+                                            <i class="bi bi-x"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -195,6 +203,33 @@
             </div>
         </div>
     </form>
+</div>
+
+<!-- Modal de Confirmação para Excluir Questão -->
+<div class="modal fade" id="deleteQuestionModal" tabindex="-1" aria-labelledby="deleteQuestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteQuestionModalLabel">Excluir Questão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <p class="mb-1"><strong>Tem certeza que deseja excluir esta questão?</strong></p>
+                        <p class="mb-0 text-muted" id="questionToDeletePreview">Esta ação não pode ser desfeita.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="bi bi-trash me-1"></i>Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -257,11 +292,16 @@
     margin-bottom: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
+    position: relative;
 }
 
 .question-item:hover {
     border-color: #007bff;
     background: #f8f9fa;
+}
+
+.question-item:hover .delete-question-btn {
+    opacity: 1;
 }
 
 .question-item.active {
@@ -281,16 +321,38 @@
     font-weight: bold;
     font-size: 0.9rem;
     margin-right: 12px;
+    flex-shrink: 0;
 }
 
 .question-preview {
     flex-grow: 1;
     font-size: 0.9rem;
     color: #6c757d;
+    margin-right: 8px;
+}
+
+.question-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .question-status {
     font-size: 1.2rem;
+}
+
+.delete-question-btn {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    border-width: 1px;
+}
+
+.delete-question-btn:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
 }
 
 .question-counter {
@@ -308,6 +370,16 @@
     border-radius: 8px;
     border: 2px solid #dee2e6;
 }
+
+/* Animação para o modal */
+.modal.fade .modal-dialog {
+    transform: translate(0, -50px);
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: translate(0, 0);
+}
 </style>
 {% endblock %}
 
@@ -316,6 +388,7 @@
 let currentQuestion = 1;
 let questions = {};
 let questionCounter = 1;
+let questionToDelete = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize first question
@@ -349,6 +422,14 @@ function setupEventListeners() {
 
     // Form validation
     document.getElementById('title').addEventListener('input', validateStep1);
+
+    // Modal de confirmação
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (questionToDelete !== null) {
+            deleteQuestion(questionToDelete);
+            bootstrap.Modal.getInstance(document.getElementById('deleteQuestionModal')).hide();
+        }
+    });
 }
 
 function validateStep1() {
@@ -378,6 +459,53 @@ function goToStep1() {
 
     document.getElementById('step2-indicator').classList.remove('active');
     document.getElementById('step1-indicator').classList.add('active');
+}
+
+function confirmDeleteQuestion(questionNum) {
+    // Evitar que o clique no botão delete acione o selectQuestion
+    event.stopPropagation();
+    
+    const question = questions[questionNum];
+    const questionText = question.text || 'Nova questão';
+    const preview = questionText.length > 50 ? questionText.substring(0, 50) + '...' : questionText;
+    
+    questionToDelete = questionNum;
+    document.getElementById('questionToDeletePreview').textContent = `Questão: "${preview}"`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteQuestionModal'));
+    modal.show();
+}
+
+function deleteQuestion(questionNum) {
+    // Não permitir excluir se for a única questão
+    const totalQuestions = Object.keys(questions).length;
+    if (totalQuestions <= 1) {
+        alert('Deve haver pelo menos uma questão no quiz');
+        return;
+    }
+
+    // Remover questão dos dados
+    delete questions[questionNum];
+
+    // Remover do DOM
+    const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
+    questionItem.remove();
+
+    // Se era a questão atual, selecionar outra
+    if (currentQuestion === questionNum) {
+        const remainingQuestions = Object.keys(questions).map(Number).sort((a, b) => a - b);
+        currentQuestion = remainingQuestions[0];
+        selectQuestion(currentQuestion);
+    }
+
+    // Atualizar contador
+    updateQuestionCounter();
+
+    // Verificar se ainda tem questões salvas para habilitar submit
+    const hasEnoughSavedQuestions = Object.values(questions).some(q => q.saved);
+    document.getElementById('finalSubmit').disabled = !hasEnoughSavedQuestions;
+
+    questionToDelete = null;
 }
 
 function saveCurrentQuestion() {
@@ -512,8 +640,16 @@ function addQuestionToSidebar(questionNum) {
     questionItem.innerHTML = `
         <div class="question-number">${questionNum.toString().padStart(2, '0')}</div>
         <div class="question-preview">Nova questão</div>
-        <div class="question-status">
-            <i class="bi bi-circle text-warning"></i>
+        <div class="question-actions">
+            <div class="question-status">
+                <i class="bi bi-circle text-warning"></i>
+            </div>
+            <button type="button" 
+                    class="btn btn-sm btn-outline-danger delete-question-btn" 
+                    onclick="confirmDeleteQuestion(${questionNum})"
+                    title="Excluir questão">
+                <i class="bi bi-x"></i>
+            </button>
         </div>
     `;
 
