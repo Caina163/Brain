@@ -56,9 +56,9 @@ def admin():
         'moderators': User.query.filter_by(user_type='moderator').count(),
         'students': User.query.filter_by(user_type='student').count(),
         'total_quizzes': Quiz.query.count(),
-        'active_quizzes': Quiz.query.filter_by(is_active=True, is_deleted=False).count(),
-        'archived_quizzes': Quiz.query.filter_by(is_archived=True).count(),
-        'deleted_quizzes': Quiz.query.filter_by(is_deleted=True).count(),
+        'active_quizzes': Quiz.query.filter_by(status='active').count(),
+        'archived_quizzes': Quiz.query.filter_by(status='archived').count(),
+        'deleted_quizzes': Quiz.query.filter_by(status='deleted').count(),
         'total_questions': Question.query.count(),
         'total_quiz_plays': QuizResult.query.count()
     }
@@ -66,24 +66,35 @@ def admin():
     # Usuários recentes (últimos 10)
     recent_users = User.query.order_by(desc(User.created_at)).limit(10).all()
 
-    # Quizzes populares (mais jogados)
-    popular_quizzes = (db.session.query(Quiz, func.count(QuizResult.id).label('play_count'))
-                       .join(QuizResult, Quiz.id == QuizResult.quiz_id)
-                       .group_by(Quiz.id)
-                       .order_by(desc('play_count'))
-                       .limit(5)
-                       .all())
+    # Quizzes populares (mais jogados) - versão segura
+    try:
+        popular_quizzes = (db.session.query(Quiz, func.count(QuizResult.id).label('play_count'))
+                           .join(QuizResult, Quiz.id == QuizResult.quiz_id)
+                           .filter(Quiz.status == 'active')
+                           .group_by(Quiz.id)
+                           .order_by(desc('play_count'))
+                           .limit(5)
+                           .all())
+    except:
+        # Fallback se a query falhar
+        popular_quizzes = Quiz.query.filter_by(status='active').order_by(desc(Quiz.total_attempts)).limit(5).all()
+        popular_quizzes = [(quiz, quiz.total_attempts) for quiz in popular_quizzes]
 
     # Usuários pendentes de aprovação
     pending_users = User.query.filter_by(is_approved=False).order_by(User.created_at.desc()).limit(5).all()
 
-    # Atividade recente (últimos resultados)
-    recent_activity = (QuizResult.query
-                       .join(User, QuizResult.user_id == User.id)
-                       .join(Quiz, QuizResult.quiz_id == Quiz.id)
-                       .order_by(desc(QuizResult.completed_at))
-                       .limit(10)
-                       .all())
+    # Atividade recente (últimos resultados) - versão segura
+    try:
+        recent_activity = (QuizResult.query
+                           .join(User, QuizResult.user_id == User.id)
+                           .join(Quiz, QuizResult.quiz_id == Quiz.id)
+                           .filter(Quiz.status == 'active')
+                           .order_by(desc(QuizResult.completed_at))
+                           .limit(10)
+                           .all())
+    except:
+        # Fallback se a query falhar
+        recent_activity = []
 
     # Estatísticas por período (últimos 30 dias)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -111,35 +122,41 @@ def moderator():
     # Estatísticas pessoais
     my_quizzes = Quiz.query.filter_by(created_by=current_user.id).all()
 
+    # Conta quizzes por status
+    active_quizzes = [q for q in my_quizzes if q.status == 'active']
+    
     stats = {
         'my_quizzes_count': len(my_quizzes),
-        'active_quizzes': len([q for q in my_quizzes if q.is_active and not q.is_deleted]),
-        'total_plays': sum(len(q.results) for q in my_quizzes),
-        'total_questions': sum(len(q.questions) for q in my_quizzes),
+        'active_quizzes': len(active_quizzes),
+        'total_plays': sum(q.total_attempts for q in my_quizzes),
+        'total_questions': sum(q.question_count for q in my_quizzes),
         'pending_users': User.query.filter_by(is_approved=False).count() if current_user.can_approve_users else 0
     }
 
     # Meus quizzes mais populares
-    my_popular_quizzes = sorted(my_quizzes, key=lambda q: len(q.results), reverse=True)[:5]
+    my_popular_quizzes = sorted(my_quizzes, key=lambda q: q.total_attempts, reverse=True)[:5]
 
     # Quizzes recentes que criei
     recent_quizzes = Quiz.query.filter_by(created_by=current_user.id).order_by(desc(Quiz.created_at)).limit(5).all()
 
-    # Resultados recentes dos meus quizzes
-    recent_results = (QuizResult.query
-                      .join(Quiz, QuizResult.quiz_id == Quiz.id)
-                      .filter(Quiz.created_by == current_user.id)
-                      .join(User, QuizResult.user_id == User.id)
-                      .order_by(desc(QuizResult.completed_at))
-                      .limit(10)
-                      .all())
+    # Resultados recentes dos meus quizzes - versão segura
+    try:
+        recent_results = (QuizResult.query
+                          .join(Quiz, QuizResult.quiz_id == Quiz.id)
+                          .filter(Quiz.created_by == current_user.id)
+                          .join(User, QuizResult.user_id == User.id)
+                          .order_by(desc(QuizResult.completed_at))
+                          .limit(10)
+                          .all())
+    except:
+        recent_results = []
 
     # Estatísticas gerais do sistema (se for moderador)
     system_stats = None
     if current_user.is_moderator:
         system_stats = {
             'total_users': User.query.filter_by(is_approved=True).count(),
-            'total_quizzes': Quiz.query.filter_by(is_active=True, is_deleted=False).count(),
+            'total_quizzes': Quiz.query.filter_by(status='active').count(),
             'total_plays': QuizResult.query.count()
         }
 
@@ -185,62 +202,69 @@ def student():
 
     # Quizzes disponíveis para jogar
     available_quizzes = (Quiz.query
-                         .filter_by(is_active=True, is_archived=False, is_deleted=False)
+                         .filter_by(status='active', is_public=True)
                          .order_by(desc(Quiz.created_at))
                          .limit(10)
                          .all())
 
     # Meus resultados recentes
-    recent_results = (QuizResult.query
-                      .filter_by(user_id=current_user.id)
-                      .join(Quiz, QuizResult.quiz_id == Quiz.id)
-                      .order_by(desc(QuizResult.completed_at))
-                      .limit(5)
-                      .all())
+    try:
+        recent_results = (QuizResult.query
+                          .filter_by(user_id=current_user.id)
+                          .join(Quiz, QuizResult.quiz_id == Quiz.id)
+                          .filter(Quiz.status == 'active')
+                          .order_by(desc(QuizResult.completed_at))
+                          .limit(5)
+                          .all())
+    except:
+        recent_results = []
 
-    # Quizzes recomendados (baseado em dificuldade e performance)
+    # Quizzes recomendados (baseado em dificuldade e performance) - versão simplificada
     recommended_quizzes = []
     if my_results:
-        # Recomendar quizzes com dificuldade similar ao desempenho do usuário
         avg_performance = stats['average_score']
         if avg_performance >= 80:
-            # Usuário bom - recomendar quizzes mais difíceis
+            # Usuário bom - recomendar quizzes menos jogados (possivelmente mais difíceis)
             recommended_quizzes = (Quiz.query
-                                   .filter_by(is_active=True, is_archived=False, is_deleted=False)
-                                   .outerjoin(QuizResult)
-                                   .group_by(Quiz.id)
-                                   .having(func.avg(QuizResult.score * 100 / QuizResult.total_questions) < 70)
+                                   .filter_by(status='active', is_public=True)
+                                   .order_by(Quiz.total_attempts.asc())
                                    .limit(3)
                                    .all())
-        elif avg_performance >= 60:
-            # Usuário médio - recomendar quizzes médios
-            recommended_quizzes = available_quizzes[:3]
         else:
-            # Usuário iniciante - recomendar quizzes mais fáceis
+            # Usuário iniciante/médio - recomendar quizzes populares (mais fáceis)
             recommended_quizzes = (Quiz.query
-                                   .filter_by(is_active=True, is_archived=False, is_deleted=False)
-                                   .outerjoin(QuizResult)
-                                   .group_by(Quiz.id)
-                                   .having(func.avg(QuizResult.score * 100 / QuizResult.total_questions) > 70)
+                                   .filter_by(status='active', is_public=True)
+                                   .order_by(desc(Quiz.total_attempts))
                                    .limit(3)
                                    .all())
     else:
         # Usuário novo - recomendar quizzes populares
         recommended_quizzes = available_quizzes[:3]
 
-    # Ranking pessoal (posição entre todos os alunos)
-    if my_results:
-        user_avg = stats['average_score']
-        better_users = (db.session.query(func.count(User.id))
-                        .join(QuizResult)
-                        .group_by(User.id)
-                        .having(func.avg(QuizResult.score * 100 / QuizResult.total_questions) > user_avg)
-                        .count())
-        total_students = User.query.filter_by(user_type='student', is_approved=True).count()
-        ranking_position = better_users + 1
-    else:
-        ranking_position = None
-        total_students = User.query.filter_by(user_type='student', is_approved=True).count()
+    # Ranking pessoal simplificado
+    ranking_position = None
+    total_students = User.query.filter_by(user_type='student', is_approved=True).count()
+
+    if my_results and total_students > 1:
+        try:
+            user_avg = stats['average_score']
+            # Contar quantos usuários têm média melhor
+            better_users_count = 0
+            all_students = User.query.filter_by(user_type='student', is_approved=True).all()
+            
+            for student in all_students:
+                if student.id != current_user.id:
+                    student_results = QuizResult.query.filter_by(user_id=student.id).all()
+                    if student_results:
+                        student_total = sum(r.score for r in student_results)
+                        student_questions = sum(r.total_questions for r in student_results)
+                        student_avg = (student_total / student_questions * 100) if student_questions > 0 else 0
+                        if student_avg > user_avg:
+                            better_users_count += 1
+            
+            ranking_position = better_users_count + 1
+        except:
+            ranking_position = None
 
     return render_template('dashboard/student.html',
                            stats=stats,
@@ -313,8 +337,7 @@ def search():
     # Buscar quizzes
     quizzes = Quiz.query.filter(
         Quiz.title.contains(query),
-        Quiz.is_active == True,
-        Quiz.is_deleted == False
+        Quiz.status == 'active'
     ).limit(10).all()
 
     # Buscar usuários (apenas para admin)
