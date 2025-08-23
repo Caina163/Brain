@@ -201,7 +201,7 @@
     </form>
 </div>
 
-<!-- Modal de Confirmação para Excluir Questão -->
+<!-- Modal de Confirmação -->
 <div class="modal fade" id="deleteQuestionModal" tabindex="-1" aria-labelledby="deleteQuestionModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -379,13 +379,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize first question
     questions[1] = {
         image: null,
-        text: '',
-        correctAnswer: '',
-        wrongAnswers: [''],
+        question: '',
+        answers: [
+            { text: '', isCorrect: true },
+            { text: '', isCorrect: false }
+        ],
         completed: false
     };
 
     setupEventListeners();
+    console.log('🚀 Sistema iniciado - formato compatível com backend');
 });
 
 function setupEventListeners() {
@@ -456,15 +459,31 @@ function autoSaveCurrentQuestion() {
         .map(input => input.value.trim())
         .filter(answer => answer.length > 0);
 
-    // Update question data
+    console.log(`💾 Auto-salvando questão ${currentQuestion}:`, {
+        questionText: questionText.substring(0, 50) + '...',
+        correctAnswer: correctAnswer.substring(0, 30) + '...',
+        wrongAnswersCount: wrongAnswers.length
+    });
+
+    // Update question data in the format expected by backend
     if (questions[currentQuestion]) {
-        questions[currentQuestion].text = questionText;
-        questions[currentQuestion].correctAnswer = correctAnswer;
-        questions[currentQuestion].wrongAnswers = wrongAnswers;
+        questions[currentQuestion].question = questionText;
+        
+        // Format answers as backend expects
+        questions[currentQuestion].answers = [
+            { text: correctAnswer, isCorrect: true }
+        ];
+        
+        // Add wrong answers
+        wrongAnswers.forEach(wrongAnswer => {
+            questions[currentQuestion].answers.push({ text: wrongAnswer, isCorrect: false });
+        });
         
         // Mark as completed if has minimum required fields
         const isComplete = questionText.length > 0 && correctAnswer.length > 0 && wrongAnswers.length > 0;
         questions[currentQuestion].completed = isComplete;
+        
+        console.log(`✅ Questão ${currentQuestion} ${isComplete ? 'completa' : 'incompleta'}`);
         
         // Update question item in sidebar
         updateQuestionItem(currentQuestion);
@@ -479,7 +498,7 @@ function confirmDeleteQuestion(questionNum) {
     event.stopPropagation();
     
     const question = questions[questionNum];
-    const questionText = question.text || 'Nova questão';
+    const questionText = question.question || 'Nova questão';
     const preview = questionText.length > 50 ? questionText.substring(0, 50) + '...' : questionText;
     
     questionToDelete = questionNum;
@@ -495,6 +514,8 @@ function deleteQuestion(questionNum) {
         alert('Deve haver pelo menos uma questão no quiz');
         return;
     }
+
+    console.log(`🗑️ Deletando questão ${questionNum}`);
 
     // Remove question
     delete questions[questionNum];
@@ -523,12 +544,16 @@ function addNewQuestion() {
     questionCounter++;
     currentQuestion = questionCounter;
 
-    // Add new question to data
+    console.log(`➕ Criando nova questão ${currentQuestion}`);
+
+    // Add new question to data in backend format
     questions[currentQuestion] = {
         image: null,
-        text: '',
-        correctAnswer: '',
-        wrongAnswers: [''],
+        question: '',
+        answers: [
+            { text: '', isCorrect: true },
+            { text: '', isCorrect: false }
+        ],
         completed: false
     };
 
@@ -546,6 +571,8 @@ function addNewQuestion() {
 function selectQuestion(questionNum) {
     // Auto-save current question first
     autoSaveCurrentQuestion();
+
+    console.log(`🔍 Selecionando questão ${questionNum}`);
 
     currentQuestion = questionNum;
 
@@ -566,16 +593,25 @@ function selectQuestion(questionNum) {
 function loadQuestionData(questionNum) {
     const question = questions[questionNum];
 
-    document.getElementById('questionText').value = question.text || '';
-    document.getElementById('correctAnswer').value = question.correctAnswer || '';
+    console.log(`📖 Carregando dados da questão ${questionNum}:`, question);
+
+    document.getElementById('questionText').value = question.question || '';
+    
+    // Find correct answer
+    const correctAnswer = question.answers.find(a => a.isCorrect);
+    document.getElementById('correctAnswer').value = correctAnswer ? correctAnswer.text : '';
 
     // Load wrong answers
     const container = document.getElementById('wrongAnswersContainer');
     container.innerHTML = '';
 
-    const wrongAnswers = question.wrongAnswers.length > 0 ? question.wrongAnswers : [''];
+    const wrongAnswers = question.answers.filter(a => !a.isCorrect);
+    if (wrongAnswers.length === 0) {
+        wrongAnswers.push({ text: '', isCorrect: false });
+    }
+
     wrongAnswers.forEach((answer, index) => {
-        addWrongAnswerField(answer);
+        addWrongAnswerField(answer.text);
     });
 
     // Clear image preview
@@ -625,7 +661,7 @@ function updateQuestionItem(questionNum) {
     const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
     const question = questions[questionNum];
 
-    const preview = question.text.length > 30 ? question.text.substring(0, 30) + '...' : question.text;
+    const preview = question.question.length > 30 ? question.question.substring(0, 30) + '...' : question.question;
     questionItem.querySelector('.question-preview').textContent = preview || 'Nova questão';
 
     const statusIcon = questionItem.querySelector('.question-status i');
@@ -734,7 +770,10 @@ document.getElementById('quizForm').addEventListener('submit', function(e) {
     // Auto-save current question
     autoSaveCurrentQuestion();
 
-    // Prepare form data
+    console.log('📤 Enviando quiz para o backend...');
+    console.log('📋 Dados das questões:', completedQuestions);
+
+    // Prepare form data in the exact format backend expects
     const formData = new FormData();
     formData.append('title', document.getElementById('title').value);
     formData.append('description', document.getElementById('description').value);
@@ -744,7 +783,8 @@ document.getElementById('quizForm').addEventListener('submit', function(e) {
         formData.append('quiz_image', quizImage);
     }
 
-    formData.append('questions_data', JSON.stringify(Object.values(questions).filter(q => q.completed)));
+    // Send questions in the format backend expects: {question: "text", answers: [{text: "", isCorrect: bool}]}
+    formData.append('questions_data', JSON.stringify(completedQuestions));
 
     // Add question images
     Object.entries(questions).forEach(([index, question]) => {
@@ -752,6 +792,16 @@ document.getElementById('quizForm').addEventListener('submit', function(e) {
             formData.append(`question_${index}_image`, question.image);
         }
     });
+
+    // Debug: Show what we're sending
+    console.log('🔍 FormData sendo enviada:');
+    for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+            console.log(`${key}: [File] ${value.name}`);
+        } else {
+            console.log(`${key}:`, value);
+        }
+    }
 
     // Submit
     const submitBtn = document.getElementById('finalSubmit');
@@ -763,15 +813,19 @@ document.getElementById('quizForm').addEventListener('submit', function(e) {
         body: formData
     })
     .then(response => {
+        console.log(`📡 Resposta do servidor: ${response.status}`);
+        
         if (response.ok) {
+            console.log('✅ Quiz criado com sucesso!');
             alert('Quiz criado com sucesso!');
             window.location.href = '/dashboard';
         } else {
+            console.error('❌ Erro na resposta:', response.statusText);
             throw new Error('Erro ao criar quiz');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('💥 Erro na requisição:', error);
         alert('Erro ao criar quiz. Tente novamente.');
         submitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Criar Quiz';
         submitBtn.disabled = false;
