@@ -12,10 +12,13 @@ from datetime import datetime
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import current_app
 
-# Importar db do app principal
-from app import db
+# Usar current_app.extensions['sqlalchemy'] em vez de importação circular
+def get_db():
+    return current_app.extensions['sqlalchemy']
 
+db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     """
@@ -163,25 +166,25 @@ class User(UserMixin, db.Model):
                     'total_questions_answered': 0
                 }
 
-            scores = [(r.score / r.total_questions) * 100 for r in self.quiz_results]
+            scores = [(r.score / r.total_questions) * 100 for r in self.quiz_results if r.total_questions > 0]
             total_questions = sum(r.total_questions for r in self.quiz_results)
 
             return {
                 'quizzes_played': total_played,
-                'average_score': round(sum(scores) / len(scores), 1),
-                'best_score': round(max(scores), 1),
+                'average_score': round(sum(scores) / len(scores), 1) if scores else 0,
+                'best_score': round(max(scores), 1) if scores else 0,
                 'total_questions_answered': total_questions
             }
         else:
             # Estatísticas para moderadores/admins (quizzes criados)
             total_created = len(self.quizzes)
-            active_quizzes = len([q for q in self.quizzes if q.is_active and not q.is_deleted])
+            active_quizzes = len([q for q in self.quizzes if getattr(q, 'is_active', True) and not getattr(q, 'is_deleted', False)])
 
             return {
                 'quizzes_created': total_created,
                 'active_quizzes': active_quizzes,
-                'total_questions': sum(len(q.questions) for q in self.quizzes),
-                'total_plays': sum(len(q.results) for q in self.quizzes)
+                'total_questions': sum(len(getattr(q, 'questions', [])) for q in self.quizzes),
+                'total_plays': sum(len(getattr(q, 'results', [])) for q in self.quizzes)
             }
 
     def __repr__(self):
