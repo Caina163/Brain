@@ -758,30 +758,69 @@ function removeImage(containerId, inputId) {
     document.getElementById(inputId).value = '';
 }
 
-// ✅ FORM SUBMISSION CORRIGIDO - AGORA FAZ POST REAL!
+// ✅ FORM SUBMISSION COMPLETAMENTE CORRIGIDO!
 document.getElementById('quizForm').addEventListener('submit', function(e) {
     e.preventDefault(); // Prevenir submit padrão para validar primeiro
     
+    console.log('=== DEBUGGING FORM SUBMISSION ===');
+    
+    // ✅ VALIDAR CAMPOS BÁSICOS
+    const title = document.getElementById('title').value.trim();
+    const description = document.getElementById('description').value.trim();
+    
+    console.log('Title:', title);
+    console.log('Description:', description);
+    
+    if (!title) {
+        alert('Por favor, preencha o título do quiz');
+        return;
+    }
+    
+    // ✅ VALIDAR QUESTÕES SALVAS
     const savedQuestions = Object.values(questions).filter(q => q.saved);
+    console.log('Saved questions:', savedQuestions.length);
+    
     if (savedQuestions.length === 0) {
         alert('Por favor, salve pelo menos uma questão antes de finalizar');
         return;
     }
 
-    // ✅ PREPARAR DADOS E FAZER SUBMIT REAL
+    // ✅ PREPARAR DADOS NO FORMATO CORRETO PARA O SERVIDOR
     const questionsArray = [];
     Object.values(questions).forEach(question => {
         if (question.saved) {
+            // ✅ FORMATO ESPERADO PELO SERVIDOR
+            const answers = [];
+            
+            // Adicionar resposta correta
+            answers.push({
+                text: question.correctAnswer,
+                isCorrect: true
+            });
+            
+            // Adicionar respostas incorretas
+            question.wrongAnswers.forEach(wrongAnswer => {
+                if (wrongAnswer.trim()) {
+                    answers.push({
+                        text: wrongAnswer.trim(),
+                        isCorrect: false
+                    });
+                }
+            });
+            
             questionsArray.push({
-                text: question.text,
-                correctAnswer: question.correctAnswer,
-                wrongAnswers: question.wrongAnswers
+                question: question.text,  // ✅ Campo 'question', não 'text'
+                type: 'multiple_choice',
+                answers: answers
             });
         }
     });
 
+    console.log('Questions array:', questionsArray);
+
     // ✅ COLOCAR DADOS NO CAMPO HIDDEN
     document.getElementById('questions_data_input').value = JSON.stringify(questionsArray);
+    console.log('Hidden field value:', document.getElementById('questions_data_input').value);
 
     // ✅ MOSTRAR LOADING
     const submitBtn = document.getElementById('finalSubmit');
@@ -789,6 +828,7 @@ document.getElementById('quizForm').addEventListener('submit', function(e) {
     submitBtn.disabled = true;
 
     // ✅ FAZER SUBMIT REAL DO FORMULÁRIO
+    console.log('Submitting form...');
     setTimeout(() => {
         this.submit(); // FAZ O POST REAL PARA O SERVIDOR!
     }, 500);
