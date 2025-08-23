@@ -4,694 +4,778 @@
 
 {% block content %}
 <div class="container py-4">
-    <!-- Header com botão voltar melhorado -->
+    <!-- Header com botão voltar -->
     <div class="d-flex align-items-center mb-4">
-        <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary me-3">
-            <i class="bi bi-arrow-left"></i> Voltar
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary me-3">
+            <i class="bi bi-arrow-left me-1"></i>Voltar ao Dashboard
         </a>
-        <h1 class="mb-0 text-primary">
-            <i class="bi bi-plus-circle"></i> Criar Novo Quiz
-        </h1>
+        <div>
+            <h1 class="h3 mb-1">Criar Novo Quiz</h1>
+            <p class="text-muted mb-0">Configure seu quiz em duas etapas simples</p>
+        </div>
     </div>
 
-    <!-- Formulário de Criação do Quiz -->
-    <form id="quizForm" method="POST" enctype="multipart/form-data" novalidate>
-        {{ csrf_token() if csrf_token }}
-        
-        <!-- Informações Básicas do Quiz -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações do Quiz</h5>
-            </div>
-            <div class="card-body p-4">
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="mb-3">
-                            <label for="title" class="form-label fw-bold">
-                                <i class="bi bi-pencil"></i> Título do Quiz *
-                            </label>
-                            <input type="text" 
-                                   class="form-control form-control-lg" 
-                                   id="title" 
-                                   name="title" 
-                                   required
-                                   placeholder="Ex: História do Brasil - Período Colonial">
-                        </div>
+    <!-- Step Indicator -->
+    <div class="steps-indicator mb-4">
+        <div class="step active" id="step1-indicator">
+            <div class="step-number">1</div>
+            <div class="step-label">Informações Básicas</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step2-indicator">
+            <div class="step-number">2</div>
+            <div class="step-label">Criar Questões</div>
+        </div>
+    </div>
 
-                        <div class="mb-3">
-                            <label for="description" class="form-label fw-bold">
-                                <i class="bi bi-text-paragraph"></i> Descrição
-                            </label>
-                            <textarea class="form-control" 
-                                      id="description" 
-                                      name="description" 
-                                      rows="3"
-                                      placeholder="Descreva o conteúdo e objetivos do quiz..."></textarea>
+    <form method="POST" enctype="multipart/form-data" id="quizForm">
+        <!-- STEP 1: Basic Information -->
+        <div id="step1" class="step-content">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Informações do Quiz</h5>
                         </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="category" class="form-label fw-bold">
-                                        <i class="bi bi-tag"></i> Categoria *
-                                    </label>
-                                    <select class="form-select" id="category" name="category" required>
-                                        <option value="">Escolha uma categoria</option>
-                                        <option value="matematica">Matemática</option>
-                                        <option value="portugues">Português</option>
-                                        <option value="historia">História</option>
-                                        <option value="geografia">Geografia</option>
-                                        <option value="ciencias">Ciências</option>
-                                        <option value="ingles">Inglês</option>
-                                        <option value="fisica">Física</option>
-                                        <option value="quimica">Química</option>
-                                        <option value="biologia">Biologia</option>
-                                        <option value="filosofia">Filosofia</option>
-                                        <option value="sociologia">Sociologia</option>
-                                        <option value="arte">Arte</option>
-                                        <option value="outros">Outros</option>
-                                    </select>
-                                </div>
+                        <div class="card-body">
+                            <div class="mb-4">
+                                <label for="title" class="form-label">Título do Quiz *</label>
+                                <input type="text"
+                                       class="form-control form-control-lg"
+                                       id="title"
+                                       name="title"
+                                       placeholder="Digite um título atrativo para seu quiz"
+                                       required
+                                       maxlength="200">
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="difficulty" class="form-label fw-bold">
-                                        <i class="bi bi-speedometer2"></i> Dificuldade *
-                                    </label>
-                                    <select class="form-select" id="difficulty" name="difficulty" required>
-                                        <option value="">Selecione a dificuldade</option>
-                                        <option value="facil">🟢 Fácil</option>
-                                        <option value="medio">🟡 Médio</option>
-                                        <option value="dificil">🔴 Difícil</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
 
-                        <div class="mb-3">
-                            <label for="time_limit" class="form-label fw-bold">
-                                <i class="bi bi-clock"></i> Tempo Limite (minutos)
-                            </label>
-                            <input type="number" 
-                                   class="form-control" 
-                                   id="time_limit" 
-                                   name="time_limit" 
-                                   min="1" 
-                                   max="180"
-                                   placeholder="30">
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="image" class="form-label fw-bold">
-                                <i class="bi bi-image"></i> Imagem do Quiz
-                            </label>
-                            <div class="image-upload-area border-2 border-dashed border-secondary rounded-3 p-4 text-center" style="cursor: pointer;">
-                                <input type="file" 
-                                       class="form-control d-none" 
-                                       id="image" 
-                                       name="image" 
+                            <div class="mb-4">
+                                <label for="description" class="form-label">Descrição (opcional)</label>
+                                <textarea class="form-control"
+                                          id="description"
+                                          name="description"
+                                          rows="3"
+                                          placeholder="Descreva brevemente o conteúdo do quiz..."
+                                          maxlength="1000"></textarea>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="quiz_image" class="form-label">Imagem de Capa (opcional)</label>
+                                <input type="file"
+                                       class="form-control"
+                                       id="quiz_image"
+                                       name="quiz_image"
                                        accept="image/*">
-                                <div id="imagePreview">
-                                    <i class="bi bi-cloud-upload display-4 text-secondary mb-2"></i>
-                                    <p class="mb-2">Clique para enviar imagem</p>
-                                    <small class="text-muted">PNG, JPG até 16MB</small>
-                                </div>
+                                <div class="form-text">Esta imagem aparecerá como capa do quiz</div>
+                                <div id="quiz-image-preview" class="mt-3"></div>
                             </div>
+                        </div>
+                        <div class="card-footer text-end">
+                            <button type="button" class="btn btn-primary btn-lg" id="nextToStep2">
+                                Próximo: Criar Questões
+                                <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Questões do Quiz -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-question-circle"></i> Questões do Quiz</h5>
-                <button type="button" class="btn btn-outline-light btn-sm" id="addQuestionBtn">
-                    <i class="bi bi-plus-circle"></i> Adicionar Questão
-                </button>
-            </div>
-            <div class="card-body p-4">
-                <!-- Container onde as questões serão adicionadas -->
-                <div id="questionsContainer">
-                    <!-- Questões aparecerão aqui -->
+        <!-- STEP 2: Create Questions -->
+        <div id="step2" class="step-content" style="display: none;">
+            <div class="row">
+                <!-- Question Editor -->
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0" id="currentQuestionTitle">Questão 1</h5>
+                            <div class="question-counter">
+                                <span id="currentQuestionNum">1</span> de <span id="totalQuestions">1</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Question Image -->
+                            <div class="mb-3">
+                                <label class="form-label">Imagem da Questão (opcional)</label>
+                                <input type="file"
+                                       class="form-control"
+                                       id="questionImage"
+                                       accept="image/*">
+                                <div class="form-text">A imagem aparecerá acima da pergunta</div>
+                                <div id="question-image-preview" class="mt-3"></div>
+                            </div>
+
+                            <!-- Question Text -->
+                            <div class="mb-4">
+                                <label class="form-label">Texto da Questão *</label>
+                                <textarea class="form-control form-control-lg"
+                                          id="questionText"
+                                          rows="3"
+                                          placeholder="Digite sua pergunta aqui..."
+                                          required
+                                          maxlength="2000"></textarea>
+                            </div>
+
+                            <!-- Correct Answer -->
+                            <div class="mb-3">
+                                <label class="form-label">Resposta Correta *</label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="correctAnswer"
+                                       placeholder="Digite a resposta correta"
+                                       required
+                                       maxlength="500">
+                                <div class="form-text">A primeira alternativa sempre será a resposta correta</div>
+                            </div>
+
+                            <!-- Wrong Answers -->
+                            <div class="mb-4">
+                                <label class="form-label">Alternativas Incorretas</label>
+                                <div id="wrongAnswersContainer">
+                                    <div class="input-group mb-2">
+                                        <input type="text"
+                                               class="form-control wrong-answer"
+                                               placeholder="Alternativa incorreta 1"
+                                               maxlength="500">
+                                        <button type="button" class="btn btn-outline-danger" onclick="removeWrongAnswer(this)">
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="addWrongAnswer()">
+                                    <i class="bi bi-plus"></i> Adicionar Alternativa
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-outline-secondary" id="backToStep1">
+                                    <i class="bi bi-arrow-left me-2"></i>Voltar
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="addNewQuestion()">
+                                    <i class="bi bi-plus me-1"></i>Nova Questão
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="text-center" id="noQuestionsMessage">
-                    <div class="py-4">
-                        <i class="bi bi-question-circle display-4 text-muted mb-3"></i>
-                        <p class="text-muted">Nenhuma questão adicionada ainda.</p>
-                        <button type="button" class="btn btn-success" onclick="addQuestion()">
-                            <i class="bi bi-plus-circle"></i> Criar Primeira Questão
-                        </button>
+
+                <!-- Questions List Sidebar -->
+                <div class="col-lg-4">
+                    <div class="card sticky-top" style="top: 100px;">
+                        <div class="card-header">
+                            <h6 class="mb-0">Questões do Quiz</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="questionsList">
+                                <div class="question-item active" data-question="1" onclick="selectQuestion(1)">
+                                    <div class="question-number">01</div>
+                                    <div class="question-preview">Nova questão</div>
+                                    <div class="question-actions">
+                                        <div class="question-status">
+                                            <i class="bi bi-circle text-warning"></i>
+                                        </div>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger delete-question-btn" 
+                                                onclick="confirmDeleteQuestion(1)"
+                                                title="Excluir questão">
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 pt-3 border-top">
+                                <button type="submit" class="btn btn-success w-100" id="finalSubmit" disabled>
+                                    <i class="bi bi-save me-2"></i>Criar Quiz
+                                </button>
+                                <div class="form-text text-center mt-2">
+                                    Preencha pelo menos uma questão para criar
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Botão Criar Quiz -->
-        <div class="text-center">
-            <button type="submit" class="btn btn-primary btn-lg px-5" id="createQuizBtn">
-                <i class="bi bi-check-circle"></i> Criar Quiz
-            </button>
         </div>
     </form>
 </div>
 
-<!-- Debug Panel (oculto por padrão) -->
-<div class="alert alert-info mt-3" id="debugPanel" style="display: none;">
-    <h6><i class="bi bi-bug"></i> Debug Info:</h6>
-    <div id="debugContent"></div>
-</div>
-
-<style>
-.image-upload-area {
-    transition: all 0.3s ease;
-}
-
-.image-upload-area:hover {
-    border-color: #0d6efd !important;
-    background-color: rgba(13, 110, 253, 0.05);
-}
-
-.question-card {
-    border-left: 4px solid #0d6efd;
-    margin-bottom: 1.5rem;
-}
-
-.answer-option {
-    margin-bottom: 10px;
-}
-
-.answer-option .form-control {
-    border-radius: 8px;
-}
-
-.correct-answer-indicator {
-    color: #198754;
-    font-weight: bold;
-}
-
-.fade-in {
-    animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.btn-loading {
-    position: relative;
-    color: transparent !important;
-}
-
-.btn-loading::after {
-    content: "";
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    top: 50%;
-    left: 50%;
-    margin-left: -8px;
-    margin-top: -8px;
-    border: 2px solid #ffffff;
-    border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-</style>
-
-<script>
-// Debug ativo para encontrar problemas
-let debugMode = true;
-let questionCount = 0;
-let isSubmitting = false;
-
-function debugLog(message, data = null) {
-    if (debugMode) {
-        console.log(`🔍 [DEBUG] ${message}`, data || '');
-        updateDebugPanel(message);
-    }
-}
-
-function updateDebugPanel(message) {
-    const debugPanel = document.getElementById('debugPanel');
-    const debugContent = document.getElementById('debugContent');
-    
-    if (debugPanel && debugContent) {
-        debugPanel.style.display = 'block';
-        const timestamp = new Date().toLocaleTimeString();
-        debugContent.innerHTML += `<div class="small">[${timestamp}] ${message}</div>`;
-        debugContent.scrollTop = debugContent.scrollHeight;
-    }
-}
-
-function addQuestion() {
-    questionCount++;
-    debugLog(`Adding question #${questionCount}`);
-    
-    const questionsContainer = document.getElementById('questionsContainer');
-    const noQuestionsMessage = document.getElementById('noQuestionsMessage');
-    
-    // Esconder mensagem "nenhuma questão"
-    if (noQuestionsMessage) {
-        noQuestionsMessage.style.display = 'none';
-    }
-    
-    const questionHTML = `
-        <div class="question-card card mb-4 fade-in" data-question="${questionCount}">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 text-primary">
-                    <i class="bi bi-question-circle"></i> Questão ${questionCount}
-                </h6>
-                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeQuestion(${questionCount})">
-                    <i class="bi bi-trash"></i> Remover
+<!-- Modal de Confirmação para Excluir Questão -->
+<div class="modal fade" id="deleteQuestionModal" tabindex="-1" aria-labelledby="deleteQuestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteQuestionModalLabel">Excluir Questão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <p class="mb-1"><strong>Tem certeza que deseja excluir esta questão?</strong></p>
+                        <p class="mb-0 text-muted" id="questionToDeletePreview">Esta ação não pode ser desfeita.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="bi bi-trash me-1"></i>Sim, Excluir
                 </button>
             </div>
-            <div class="card-body">
-                <!-- Texto da Questão -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Pergunta *</label>
-                    <textarea class="form-control" 
-                              name="question_${questionCount}_text" 
-                              id="question_${questionCount}_text"
-                              rows="3" 
-                              placeholder="Digite sua pergunta aqui..."
-                              required></textarea>
-                </div>
-                
-                <!-- Alternativas -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Alternativas *</label>
-                    
-                    <div class="answer-option">
-                        <div class="input-group mb-2">
-                            <div class="input-group-text">
-                                <input type="radio" name="question_${questionCount}_correct" value="0" required>
-                            </div>
-                            <span class="input-group-text fw-bold">A</span>
-                            <input type="text" class="form-control" name="question_${questionCount}_option_a" placeholder="Alternativa A" required>
-                        </div>
-                    </div>
-                    
-                    <div class="answer-option">
-                        <div class="input-group mb-2">
-                            <div class="input-group-text">
-                                <input type="radio" name="question_${questionCount}_correct" value="1" required>
-                            </div>
-                            <span class="input-group-text fw-bold">B</span>
-                            <input type="text" class="form-control" name="question_${questionCount}_option_b" placeholder="Alternativa B" required>
-                        </div>
-                    </div>
-                    
-                    <div class="answer-option">
-                        <div class="input-group mb-2">
-                            <div class="input-group-text">
-                                <input type="radio" name="question_${questionCount}_correct" value="2" required>
-                            </div>
-                            <span class="input-group-text fw-bold">C</span>
-                            <input type="text" class="form-control" name="question_${questionCount}_option_c" placeholder="Alternativa C" required>
-                        </div>
-                    </div>
-                    
-                    <div class="answer-option">
-                        <div class="input-group mb-2">
-                            <div class="input-group-text">
-                                <input type="radio" name="question_${questionCount}_correct" value="3" required>
-                            </div>
-                            <span class="input-group-text fw-bold">D</span>
-                            <input type="text" class="form-control" name="question_${questionCount}_option_d" placeholder="Alternativa D" required>
-                        </div>
-                    </div>
-                    
-                    <small class="text-muted">
-                        <i class="bi bi-info-circle"></i> 
-                        Marque a alternativa correta clicando no círculo ao lado
-                    </small>
-                </div>
-                
-                <!-- Imagem da Questão -->
-                <div class="mb-3">
-                    <label class="form-label">Imagem da Questão (opcional)</label>
-                    <input type="file" class="form-control" name="question_${questionCount}_image" accept="image/*">
-                </div>
-            </div>
         </div>
-    `;
-    
-    questionsContainer.insertAdjacentHTML('beforeend', questionHTML);
-    
-    // Focar no campo de texto da nova questão
-    setTimeout(() => {
-        const textField = document.getElementById(`question_${questionCount}_text`);
-        if (textField) {
-            textField.focus();
-        }
-    }, 100);
-    
-    debugLog(`Question #${questionCount} added successfully`);
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.steps-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 30px 0;
 }
 
-function removeQuestion(questionNum) {
-    debugLog(`Removing question #${questionNum}`);
-    
-    if (confirm('Tem certeza que deseja remover esta questão?')) {
-        const questionElement = document.querySelector(`[data-question="${questionNum}"]`);
-        if (questionElement) {
-            questionElement.remove();
-            debugLog(`Question #${questionNum} removed`);
-            
-            // Mostrar mensagem se não há mais questões
-            const remainingQuestions = document.querySelectorAll('.question-card');
-            if (remainingQuestions.length === 0) {
-                const noQuestionsMessage = document.getElementById('noQuestionsMessage');
-                if (noQuestionsMessage) {
-                    noQuestionsMessage.style.display = 'block';
-                }
-            }
-        }
-    }
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0.5;
 }
 
-// Event Listeners
+.step.active {
+    opacity: 1;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.step.active .step-number {
+    background: #007bff;
+    color: white;
+}
+
+.step-line {
+    width: 100px;
+    height: 2px;
+    background: #e9ecef;
+    margin: 0 20px;
+}
+
+.step-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.question-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.question-item:hover {
+    border-color: #007bff;
+    background: #f8f9fa;
+}
+
+.question-item:hover .delete-question-btn {
+    opacity: 1;
+}
+
+.question-item.active {
+    border-color: #007bff;
+    background: #e3f2fd;
+}
+
+.question-number {
+    width: 30px;
+    height: 30px;
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.question-preview {
+    flex-grow: 1;
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-right: 8px;
+}
+
+.question-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.question-status {
+    font-size: 1.2rem;
+}
+
+.delete-question-btn {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    border-width: 1px;
+}
+
+.delete-question-btn:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.question-counter {
+    background: #e3f2fd;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1976d2;
+}
+
+.image-preview {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentQuestion = 1;
+let questions = {};
+let questionCounter = 1;
+let questionToDelete = null;
+
 document.addEventListener('DOMContentLoaded', function() {
-    debugLog('DOM loaded, initializing event listeners');
-    
-    // Botão adicionar questão
-    const addQuestionBtn = document.getElementById('addQuestionBtn');
-    if (addQuestionBtn) {
-        addQuestionBtn.addEventListener('click', addQuestion);
-    }
-    
-    // Upload de imagem
-    const imageInput = document.getElementById('image');
-    const imageUploadArea = document.querySelector('.image-upload-area');
-    
-    if (imageInput && imageUploadArea) {
-        imageUploadArea.addEventListener('click', () => imageInput.click());
-        
-        imageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                debugLog(`Image selected: ${file.name}`);
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('imagePreview');
-                    if (preview) {
-                        preview.innerHTML = `
-                            <img src="${e.target.result}" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
-                            <p class="mt-2 mb-0 small text-success">
-                                <i class="bi bi-check-circle"></i> ${file.name}
-                            </p>
-                        `;
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-    
-    // Envio do formulário
-    const form = document.getElementById('quizForm');
-    if (form) {
-        form.addEventListener('submit', handleFormSubmit);
-    }
-    
-    debugLog('Event listeners configured successfully');
+    // Initialize first question
+    questions[1] = {
+        image: null,
+        text: '',
+        correctAnswer: '',
+        wrongAnswers: [''],
+        completed: false
+    };
+
+    setupEventListeners();
 });
 
-async function handleFormSubmit(e) {
-    e.preventDefault();
-    
-    if (isSubmitting) {
-        debugLog('Already submitting, ignoring...');
+function setupEventListeners() {
+    // Step navigation
+    document.getElementById('nextToStep2').addEventListener('click', goToStep2);
+    document.getElementById('backToStep1').addEventListener('click', goToStep1);
+
+    // Image previews
+    document.getElementById('quiz_image').addEventListener('change', function() {
+        showImagePreview(this, 'quiz-image-preview');
+    });
+
+    document.getElementById('questionImage').addEventListener('change', function() {
+        showImagePreview(this, 'question-image-preview');
+        if (questions[currentQuestion]) {
+            questions[currentQuestion].image = this.files[0];
+        }
+    });
+
+    // Form validation
+    document.getElementById('title').addEventListener('input', validateStep1);
+
+    // Auto-save question when fields change
+    document.getElementById('questionText').addEventListener('input', autoSaveCurrentQuestion);
+    document.getElementById('correctAnswer').addEventListener('input', autoSaveCurrentQuestion);
+
+    // Modal confirmation
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (questionToDelete !== null) {
+            deleteQuestion(questionToDelete);
+            bootstrap.Modal.getInstance(document.getElementById('deleteQuestionModal')).hide();
+        }
+    });
+}
+
+function validateStep1() {
+    const title = document.getElementById('title').value.trim();
+    const nextBtn = document.getElementById('nextToStep2');
+    nextBtn.disabled = title.length < 3;
+}
+
+function goToStep2() {
+    const title = document.getElementById('title').value.trim();
+    if (title.length < 3) {
+        alert('Por favor, preencha o título do quiz');
         return;
     }
-    
-    isSubmitting = true;
-    debugLog('Starting form submission');
-    
-    const submitBtn = document.getElementById('createQuizBtn');
-    const originalText = submitBtn.innerHTML;
-    
-    // Loading state
-    submitBtn.classList.add('btn-loading');
-    submitBtn.disabled = true;
-    
-    try {
-        // Validar formulário
-        if (!validateForm()) {
-            debugLog('Form validation failed');
-            return;
-        }
+
+    document.getElementById('step1').style.display = 'none';
+    document.getElementById('step2').style.display = 'block';
+
+    document.getElementById('step1-indicator').classList.remove('active');
+    document.getElementById('step2-indicator').classList.add('active');
+}
+
+function goToStep1() {
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step1').style.display = 'block';
+
+    document.getElementById('step2-indicator').classList.remove('active');
+    document.getElementById('step1-indicator').classList.add('active');
+}
+
+function autoSaveCurrentQuestion() {
+    const questionText = document.getElementById('questionText').value.trim();
+    const correctAnswer = document.getElementById('correctAnswer').value.trim();
+    const wrongAnswers = Array.from(document.querySelectorAll('.wrong-answer'))
+        .map(input => input.value.trim())
+        .filter(answer => answer.length > 0);
+
+    // Update question data
+    if (questions[currentQuestion]) {
+        questions[currentQuestion].text = questionText;
+        questions[currentQuestion].correctAnswer = correctAnswer;
+        questions[currentQuestion].wrongAnswers = wrongAnswers;
         
-        // Coletar dados
-        const formData = collectFormData();
-        if (!formData) {
-            debugLog('Failed to collect form data');
-            return;
-        }
+        // Mark as completed if has minimum required fields
+        const isComplete = questionText.length > 0 && correctAnswer.length > 0 && wrongAnswers.length > 0;
+        questions[currentQuestion].completed = isComplete;
         
-        debugLog('Sending form data to server...');
+        // Update question item in sidebar
+        updateQuestionItem(currentQuestion);
         
-        // Enviar para servidor
-        const response = await fetch(window.location.href, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        
-        debugLog(`Server response status: ${response.status}`);
-        
-        if (response.ok) {
-            const result = await response.text();
-            debugLog('Server response received', result.substring(0, 200) + '...');
-            
-            try {
-                const jsonResult = JSON.parse(result);
-                if (jsonResult.success) {
-                    showAlert('Quiz criado com sucesso!', 'success');
-                    setTimeout(() => {
-                        window.location.href = jsonResult.redirect || '/dashboard';
-                    }, 2000);
-                } else {
-                    showAlert(jsonResult.message || 'Erro ao criar quiz', 'danger');
-                }
-            } catch (jsonError) {
-                // Se não for JSON, assumir que foi criado com sucesso
-                debugLog('Non-JSON response, assuming success');
-                showAlert('Quiz criado com sucesso!', 'success');
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 2000);
-            }
-        } else {
-            const errorText = await response.text();
-            debugLog(`Server error: ${response.status}`, errorText);
-            showAlert(`Erro ${response.status}: ${response.statusText}`, 'danger');
-        }
-        
-    } catch (error) {
-        debugLog('Submission error', error);
-        console.error('Submission error:', error);
-        showAlert('Erro de conexão. Tente novamente.', 'danger');
-    } finally {
-        isSubmitting = false;
-        submitBtn.classList.remove('btn-loading');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
+        // Enable/disable submit button
+        const hasCompleteQuestion = Object.values(questions).some(q => q.completed);
+        document.getElementById('finalSubmit').disabled = !hasCompleteQuestion;
     }
 }
 
-function validateForm() {
-    debugLog('Validating form...');
+function confirmDeleteQuestion(questionNum) {
+    event.stopPropagation();
     
-    // Validar campos básicos
-    const title = document.getElementById('title').value.trim();
-    const category = document.getElementById('category').value;
-    const difficulty = document.getElementById('difficulty').value;
+    const question = questions[questionNum];
+    const questionText = question.text || 'Nova questão';
+    const preview = questionText.length > 50 ? questionText.substring(0, 50) + '...' : questionText;
     
-    if (!title) {
-        showAlert('Título é obrigatório', 'warning');
-        return false;
-    }
+    questionToDelete = questionNum;
+    document.getElementById('questionToDeletePreview').textContent = `Questão: "${preview}"`;
     
-    if (!category) {
-        showAlert('Categoria é obrigatória', 'warning');
-        return false;
-    }
-    
-    if (!difficulty) {
-        showAlert('Dificuldade é obrigatória', 'warning');
-        return false;
-    }
-    
-    // Validar questões
-    const questions = document.querySelectorAll('.question-card');
-    if (questions.length === 0) {
-        showAlert('Adicione pelo menos uma questão', 'warning');
-        return false;
-    }
-    
-    debugLog(`Found ${questions.length} questions to validate`);
-    
-    for (let i = 0; i < questions.length; i++) {
-        const questionElement = questions[i];
-        const questionNum = questionElement.dataset.question;
-        
-        debugLog(`Validating question #${questionNum}`);
-        
-        // Validar texto da questão
-        const textField = questionElement.querySelector(`[name="question_${questionNum}_text"]`);
-        if (!textField || !textField.value.trim()) {
-            showAlert(`Questão ${parseInt(i) + 1}: Texto da pergunta é obrigatório`, 'warning');
-            return false;
-        }
-        
-        // Validar alternativas
-        const options = ['a', 'b', 'c', 'd'];
-        for (let option of options) {
-            const optionField = questionElement.querySelector(`[name="question_${questionNum}_option_${option}"]`);
-            if (!optionField || !optionField.value.trim()) {
-                showAlert(`Questão ${parseInt(i) + 1}: Todas as alternativas devem ser preenchidas`, 'warning');
-                return false;
-            }
-        }
-        
-        // Validar resposta correta
-        const correctAnswer = questionElement.querySelector(`input[name="question_${questionNum}_correct"]:checked`);
-        if (!correctAnswer) {
-            showAlert(`Questão ${parseInt(i) + 1}: Selecione a resposta correta`, 'warning');
-            return false;
-        }
-        
-        debugLog(`Question #${questionNum} validation passed`);
-    }
-    
-    debugLog('Form validation successful');
-    return true;
+    const modal = new bootstrap.Modal(document.getElementById('deleteQuestionModal'));
+    modal.show();
 }
 
-function collectFormData() {
-    debugLog('Collecting form data...');
+function deleteQuestion(questionNum) {
+    const totalQuestions = Object.keys(questions).length;
+    if (totalQuestions <= 1) {
+        alert('Deve haver pelo menos uma questão no quiz');
+        return;
+    }
+
+    // Remove question
+    delete questions[questionNum];
+    document.querySelector(`[data-question="${questionNum}"]`).remove();
+
+    // Select another question if current was deleted
+    if (currentQuestion === questionNum) {
+        const remainingQuestions = Object.keys(questions).map(Number).sort((a, b) => a - b);
+        currentQuestion = remainingQuestions[0];
+        selectQuestion(currentQuestion);
+    }
+
+    updateQuestionCounter();
     
-    const formData = new FormData();
+    // Update submit button
+    const hasCompleteQuestion = Object.values(questions).some(q => q.completed);
+    document.getElementById('finalSubmit').disabled = !hasCompleteQuestion;
+
+    questionToDelete = null;
+}
+
+function addNewQuestion() {
+    // Auto-save current question
+    autoSaveCurrentQuestion();
     
-    // Dados básicos
-    const basicFields = ['title', 'description', 'category', 'difficulty', 'time_limit'];
-    basicFields.forEach(fieldName => {
-        const field = document.getElementById(fieldName);
-        if (field && field.value) {
-            formData.append(fieldName, field.value);
-            debugLog(`Added basic field: ${fieldName} = ${field.value}`);
-        }
+    questionCounter++;
+    currentQuestion = questionCounter;
+
+    // Add new question to data
+    questions[currentQuestion] = {
+        image: null,
+        text: '',
+        correctAnswer: '',
+        wrongAnswers: [''],
+        completed: false
+    };
+
+    // Add to sidebar
+    addQuestionToSidebar(currentQuestion);
+
+    // Clear form
+    clearQuestionForm();
+
+    // Update UI
+    updateQuestionCounter();
+    selectQuestion(currentQuestion);
+}
+
+function selectQuestion(questionNum) {
+    // Auto-save current question first
+    autoSaveCurrentQuestion();
+
+    currentQuestion = questionNum;
+
+    // Update active question in sidebar
+    document.querySelectorAll('.question-item').forEach(item => {
+        item.classList.remove('active');
     });
-    
-    // Imagem principal
-    const imageField = document.getElementById('image');
-    if (imageField && imageField.files[0]) {
-        formData.append('image', imageField.files[0]);
-        debugLog(`Added main image: ${imageField.files[0].name}`);
-    }
-    
-    // Questões
-    const questions = document.querySelectorAll('.question-card');
-    debugLog(`Collecting data from ${questions.length} questions`);
-    
-    questions.forEach((questionElement, index) => {
-        const questionNum = questionElement.dataset.question;
-        debugLog(`Collecting data for question #${questionNum} (index ${index})`);
-        
-        // Texto da questão
-        const textField = questionElement.querySelector(`[name="question_${questionNum}_text"]`);
-        if (textField) {
-            formData.append(`questions[${index}][text]`, textField.value);
-        }
-        
-        // Alternativas
-        const options = ['a', 'b', 'c', 'd'];
-        options.forEach(option => {
-            const optionField = questionElement.querySelector(`[name="question_${questionNum}_option_${option}"]`);
-            if (optionField) {
-                formData.append(`questions[${index}][${option}]`, optionField.value);
-            }
-        });
-        
-        // Resposta correta
-        const correctAnswer = questionElement.querySelector(`input[name="question_${questionNum}_correct"]:checked`);
-        if (correctAnswer) {
-            formData.append(`questions[${index}][correct]`, correctAnswer.value);
-        }
-        
-        // Imagem da questão
-        const imageField = questionElement.querySelector(`[name="question_${questionNum}_image"]`);
-        if (imageField && imageField.files[0]) {
-            formData.append(`questions[${index}][image]`, imageField.files[0]);
-            debugLog(`Added image for question #${questionNum}`);
-        }
-    });
-    
-    debugLog('Form data collection complete');
-    
-    // Debug: mostrar todos os dados coletados
-    for (let [key, value] of formData.entries()) {
-        debugLog(`FormData: ${key} = ${value instanceof File ? `[File: ${value.name}]` : value}`);
-    }
-    
-    return formData;
+    document.querySelector(`[data-question="${questionNum}"]`).classList.add('active');
+
+    // Load question data
+    loadQuestionData(questionNum);
+
+    // Update UI
+    updateQuestionCounter();
+    document.getElementById('currentQuestionTitle').textContent = `Questão ${questionNum}`;
 }
 
-function showAlert(message, type = 'info') {
-    debugLog(`Showing alert (${type}): ${message}`);
-    
-    // Remover alertas existentes
-    const existingAlerts = document.querySelectorAll('.alert-dismissible');
-    existingAlerts.forEach(alert => alert.remove());
-    
-    const alertHTML = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+function loadQuestionData(questionNum) {
+    const question = questions[questionNum];
+
+    document.getElementById('questionText').value = question.text || '';
+    document.getElementById('correctAnswer').value = question.correctAnswer || '';
+
+    // Load wrong answers
+    const container = document.getElementById('wrongAnswersContainer');
+    container.innerHTML = '';
+
+    const wrongAnswers = question.wrongAnswers.length > 0 ? question.wrongAnswers : [''];
+    wrongAnswers.forEach((answer, index) => {
+        addWrongAnswerField(answer);
+    });
+
+    // Clear image preview
+    document.getElementById('question-image-preview').innerHTML = '';
+    document.getElementById('questionImage').value = '';
+}
+
+function clearQuestionForm() {
+    document.getElementById('questionText').value = '';
+    document.getElementById('correctAnswer').value = '';
+    document.getElementById('questionImage').value = '';
+    document.getElementById('question-image-preview').innerHTML = '';
+
+    const container = document.getElementById('wrongAnswersContainer');
+    container.innerHTML = '';
+    addWrongAnswerField('');
+}
+
+function addQuestionToSidebar(questionNum) {
+    const questionsList = document.getElementById('questionsList');
+    const questionItem = document.createElement('div');
+    questionItem.className = 'question-item';
+    questionItem.setAttribute('data-question', questionNum);
+    questionItem.onclick = () => selectQuestion(questionNum);
+
+    questionItem.innerHTML = `
+        <div class="question-number">${questionNum.toString().padStart(2, '0')}</div>
+        <div class="question-preview">Nova questão</div>
+        <div class="question-actions">
+            <div class="question-status">
+                <i class="bi bi-circle text-warning"></i>
+            </div>
+            <button type="button" 
+                    class="btn btn-sm btn-outline-danger delete-question-btn" 
+                    onclick="confirmDeleteQuestion(${questionNum})"
+                    title="Excluir questão">
+                ×
+            </button>
         </div>
     `;
-    
-    const container = document.querySelector('.container');
-    if (container) {
-        container.insertAdjacentHTML('afterbegin', alertHTML);
-        
-        // Auto-remover após 5 segundos (exceto erros)
-        if (type !== 'danger') {
-            setTimeout(() => {
-                const alert = container.querySelector('.alert');
-                if (alert) {
-                    alert.classList.remove('show');
-                    setTimeout(() => alert.remove(), 300);
-                }
-            }, 5000);
-        }
+
+    questionsList.appendChild(questionItem);
+    updateQuestionCounter();
+}
+
+function updateQuestionItem(questionNum) {
+    const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
+    const question = questions[questionNum];
+
+    const preview = question.text.length > 30 ? question.text.substring(0, 30) + '...' : question.text;
+    questionItem.querySelector('.question-preview').textContent = preview || 'Nova questão';
+
+    const statusIcon = questionItem.querySelector('.question-status i');
+    if (question.completed) {
+        statusIcon.className = 'bi bi-check-circle text-success';
+    } else {
+        statusIcon.className = 'bi bi-circle text-warning';
     }
 }
 
-// Global error handling
-window.addEventListener('error', (e) => {
-    debugLog(`Global error: ${e.error?.message || e.message}`);
-    console.error('Global error:', e.error);
-});
+function updateQuestionCounter() {
+    document.getElementById('currentQuestionNum').textContent = currentQuestion;
+    document.getElementById('totalQuestions').textContent = Object.keys(questions).length;
+}
 
-window.addEventListener('unhandledrejection', (e) => {
-    debugLog(`Unhandled promise rejection: ${e.reason}`);
-    console.error('Unhandled promise rejection:', e.reason);
+function addWrongAnswer() {
+    addWrongAnswerField('');
+}
+
+function addWrongAnswerField(value = '') {
+    const container = document.getElementById('wrongAnswersContainer');
+    const wrongAnswerCount = container.children.length;
+
+    if (wrongAnswerCount >= 5) {
+        alert('Máximo de 5 alternativas incorretas por questão');
+        return;
+    }
+
+    const newAnswer = document.createElement('div');
+    newAnswer.className = 'input-group mb-2';
+    newAnswer.innerHTML = `
+        <input type="text"
+               class="form-control wrong-answer"
+               placeholder="Alternativa incorreta ${wrongAnswerCount + 1}"
+               value="${value}"
+               maxlength="500"
+               oninput="autoSaveCurrentQuestion()">
+        <button type="button" class="btn btn-outline-danger" onclick="removeWrongAnswer(this)">
+            ×
+        </button>
+    `;
+
+    container.appendChild(newAnswer);
+}
+
+function removeWrongAnswer(button) {
+    const container = document.getElementById('wrongAnswersContainer');
+    if (container.children.length <= 1) {
+        alert('Deve haver pelo menos uma alternativa incorreta');
+        return;
+    }
+
+    button.closest('.input-group').remove();
+    autoSaveCurrentQuestion();
+}
+
+function showImagePreview(input, containerId) {
+    const file = input.files[0];
+    const container = document.getElementById(containerId);
+
+    container.innerHTML = '';
+
+    if (file) {
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor, selecione apenas arquivos de imagem');
+            input.value = '';
+            return;
+        }
+
+        if (file.size > 16 * 1024 * 1024) {
+            alert('Arquivo muito grande. Máximo 16MB');
+            input.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            container.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <img src="${e.target.result}" class="image-preview me-3">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage('${containerId}', '${input.id}')">
+                        × Remover
+                    </button>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeImage(containerId, inputId) {
+    document.getElementById(containerId).innerHTML = '';
+    document.getElementById(inputId).value = '';
+}
+
+// Form submission
+document.getElementById('quizForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const completedQuestions = Object.values(questions).filter(q => q.completed);
+    if (completedQuestions.length === 0) {
+        alert('Por favor, preencha pelo menos uma questão antes de criar o quiz');
+        return;
+    }
+
+    // Auto-save current question
+    autoSaveCurrentQuestion();
+
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('title', document.getElementById('title').value);
+    formData.append('description', document.getElementById('description').value);
+
+    const quizImage = document.getElementById('quiz_image').files[0];
+    if (quizImage) {
+        formData.append('quiz_image', quizImage);
+    }
+
+    formData.append('questions_data', JSON.stringify(Object.values(questions).filter(q => q.completed)));
+
+    // Add question images
+    Object.entries(questions).forEach(([index, question]) => {
+        if (question.completed && question.image) {
+            formData.append(`question_${index}_image`, question.image);
+        }
+    });
+
+    // Submit
+    const submitBtn = document.getElementById('finalSubmit');
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Criando...';
+    submitBtn.disabled = true;
+
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('Quiz criado com sucesso!');
+            window.location.href = '/dashboard';
+        } else {
+            throw new Error('Erro ao criar quiz');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erro ao criar quiz. Tente novamente.');
+        submitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Criar Quiz';
+        submitBtn.disabled = false;
+    });
 });
 </script>
-
 {% endblock %}
