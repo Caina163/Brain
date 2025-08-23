@@ -517,6 +517,9 @@ function deleteQuestion(questionNum) {
 
     console.log(`🗑️ Deletando questão ${questionNum}`);
 
+    // SALVAR QUESTÃO ATUAL antes de deletar para não perder dados
+    autoSaveCurrentQuestion();
+
     // Remove question
     delete questions[questionNum];
     document.querySelector(`[data-question="${questionNum}"]`).remove();
@@ -526,6 +529,10 @@ function deleteQuestion(questionNum) {
         const remainingQuestions = Object.keys(questions).map(Number).sort((a, b) => a - b);
         currentQuestion = remainingQuestions[0];
         selectQuestion(currentQuestion);
+    } else {
+        // Se não era a questão atual, apenas recarregar os dados da questão atual
+        // para garantir que não foram perdidos
+        loadQuestionData(currentQuestion);
     }
 
     updateQuestionCounter();
