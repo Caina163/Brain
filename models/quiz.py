@@ -11,14 +11,12 @@ Define a estrutura dos quizzes com:
 
 from datetime import datetime
 import random
-from flask import current_app
-from flask_sqlalchemy import SQLAlchemy
 
-# Obter instância do SQLAlchemy do Flask
-def get_db():
-    return current_app.extensions['sqlalchemy']
-
-db = get_db()
+# Importação segura do SQLAlchemy
+try:
+    from app import db
+except ImportError:
+    db = None
 
 
 class Quiz(db.Model):
@@ -36,10 +34,9 @@ class Quiz(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Sistema de status do quiz
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
-    is_archived = db.Column(db.Boolean, default=False, nullable=False)
-    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    # Sistema de status do quiz - NOVO SISTEMA
+    status = db.Column(db.String(20), default='active', nullable=False)  # active, archived, deleted
+    is_public = db.Column(db.Boolean, default=True, nullable=False)
 
     # Imagem do quiz (opcional)
     image_filename = db.Column(db.String(255), nullable=True)
@@ -60,6 +57,8 @@ class Quiz(db.Model):
         self.created_by = created_by
         self.image_filename = image_filename
         self.time_limit = time_limit
+        self.status = 'active'
+        self.is_public = True
 
     @property
     def question_count(self):
@@ -69,8 +68,7 @@ class Quiz(db.Model):
         except Exception:
             return 0
 
-    @property
-    def creator(self):
+    def get_creator(self):
         """Retorna o criador do quiz com proteção contra erros"""
         try:
             from models.user import User
@@ -78,17 +76,35 @@ class Quiz(db.Model):
         except Exception:
             return None
 
+    def get_questions(self):
+        """Retorna lista de questões com fallback seguro"""
+        try:
+            return list(self.questions) if self.questions else []
+        except Exception:
+            return []
+
+    def get_results(self):
+        """Retorna lista de resultados com fallback seguro"""
+        try:
+            return list(self.results) if self.results else []
+        except Exception:
+            return []
+
+    # Propriedades de compatibilidade com sistema antigo
     @property
-    def status(self):
-        """Retorna o status atual do quiz"""
-        if self.is_deleted:
-            return 'deleted'
-        elif self.is_archived:
-            return 'archived'
-        elif self.is_active:
-            return 'active'
-        else:
-            return 'inactive'
+    def is_active(self):
+        """Compatibilidade - verifica se está ativo"""
+        return self.status == 'active'
+
+    @property
+    def is_archived(self):
+        """Compatibilidade - verifica se está arquivado"""
+        return self.status == 'archived'
+
+    @property
+    def is_deleted(self):
+        """Compatibilidade - verifica se está excluído"""
+        return self.status == 'deleted'
 
     def get_status_display(self):
         """Retorna o status em português"""
@@ -112,14 +128,13 @@ class Quiz(db.Model):
 
     def can_be_played(self):
         """Verifica se o quiz pode ser jogado"""
-        return (self.is_active and
-                not self.is_archived and
-                not self.is_deleted and
+        return (self.status == 'active' and 
+                self.is_public and
                 self.question_count > 0)
 
     def can_be_edited(self):
         """Verifica se o quiz pode ser editado"""
-        return not self.is_deleted
+        return self.status != 'deleted'
 
     def get_questions_for_play(self):
         """
@@ -129,7 +144,7 @@ class Quiz(db.Model):
         prepared_questions = []
 
         try:
-            questions = list(self.questions) if self.questions else []
+            questions = self.get_questions()
             if self.shuffle_questions:
                 random.shuffle(questions)
 
@@ -196,69 +211,69 @@ class Quiz(db.Model):
     def archive(self):
         """Arquiva o quiz"""
         try:
-            db = current_app.extensions['sqlalchemy']
-            self.is_archived = True
-            self.is_active = False
+            self.status = 'archived'
             self.updated_at = datetime.utcnow()
-            db.session.commit()
+            if db:
+                db.session.commit()
         except Exception as e:
-            db.session.rollback()
+            if db:
+                db.session.rollback()
             raise e
 
     def delete(self):
         """Marca o quiz como excluído (soft delete)"""
         try:
-            db = current_app.extensions['sqlalchemy']
-            self.is_deleted = True
-            self.is_active = False
-            self.is_archived = False
+            self.status = 'deleted'
             self.updated_at = datetime.utcnow()
-            db.session.commit()
+            if db:
+                db.session.commit()
         except Exception as e:
-            db.session.rollback()
+            if db:
+                db.session.rollback()
             raise e
 
     def restore(self):
         """Restaura quiz arquivado ou excluído"""
         try:
-            db = current_app.extensions['sqlalchemy']
-            self.is_deleted = False
-            self.is_archived = False
-            self.is_active = True
+            self.status = 'active'
             self.updated_at = datetime.utcnow()
-            db.session.commit()
+            if db:
+                db.session.commit()
         except Exception as e:
-            db.session.rollback()
+            if db:
+                db.session.rollback()
             raise e
 
     def activate(self):
         """Ativa quiz inativo"""
         try:
-            if not self.is_deleted:
-                db = current_app.extensions['sqlalchemy']
-                self.is_active = True
-                self.is_archived = False
+            if self.status != 'deleted':
+                self.status = 'active'
                 self.updated_at = datetime.utcnow()
-                db.session.commit()
+                if db:
+                    db.session.commit()
         except Exception as e:
-            db.session.rollback()
+            if db:
+                db.session.rollback()
             raise e
 
     def deactivate(self):
         """Desativa quiz ativo"""
         try:
-            db = current_app.extensions['sqlalchemy']
-            self.is_active = False
+            self.status = 'inactive'
             self.updated_at = datetime.utcnow()
-            db.session.commit()
+            if db:
+                db.session.commit()
         except Exception as e:
-            db.session.rollback()
+            if db:
+                db.session.rollback()
             raise e
 
     def get_completion_stats(self):
         """Retorna estatísticas de conclusão do quiz"""
         try:
-            total_attempts = len(self.results) if self.results else 0
+            results = self.get_results()
+            total_attempts = len(results)
             if total_attempts == 0:
                 return {
                     'total_attempts': 0,
@@ -269,9 +284,9 @@ class Quiz(db.Model):
                     'average_time': 0
                 }
 
-            scores = [result.score for result in self.results if hasattr(result, 'score')]
-            percentages = [result.percentage_score for result in self.results if hasattr(result, 'percentage_score')]
-            times = [result.time_spent for result in self.results if hasattr(result, 'time_spent') and result.time_spent]
+            scores = [result.score for result in results if hasattr(result, 'score')]
+            percentages = [result.percentage_score for result in results if hasattr(result, 'percentage_score')]
+            times = [result.time_spent for result in results if hasattr(result, 'time_spent') and result.time_spent]
 
             stats = {
                 'total_attempts': total_attempts,
@@ -357,6 +372,23 @@ class Quiz(db.Model):
         # Estimativa: 1 minuto por questão + 30 segundos de buffer
         base_time = self.question_count * 1.5
         return max(base_time, 2)  # Mínimo 2 minutos
+
+    # Métodos estáticos para queries comuns
+    @staticmethod
+    def get_active_quizzes():
+        """Retorna todos os quizzes ativos"""
+        try:
+            return Quiz.query.filter_by(status='active', is_public=True).all()
+        except Exception:
+            return []
+
+    @staticmethod
+    def get_user_quizzes(user_id):
+        """Retorna quizzes criados por um usuário"""
+        try:
+            return Quiz.query.filter_by(created_by=user_id).all()
+        except Exception:
+            return []
 
     def __repr__(self):
         return f'<Quiz {self.title} ({self.status})>'
