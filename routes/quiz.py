@@ -41,23 +41,12 @@ def create():
         # Obter dados do formulário
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
-        time_limit = request.form.get('time_limit', '').strip()
+        questions_data = request.form.get('questions_data', '')
 
-        # Processar tempo limite
-        time_limit_value = None
-        if time_limit:
-            try:
-                time_limit_value = int(time_limit)
-                if time_limit_value <= 0:
-                    time_limit_value = None
-            except ValueError:
-                time_limit_value = None
-
-        # Validar dados do quiz
+        # Validar dados básicos do quiz
         quiz_data = {
             'title': title,
-            'description': description,
-            'time_limit': time_limit_value
+            'description': description
         }
 
         is_valid, errors = validate_quiz_data(quiz_data)
@@ -67,7 +56,18 @@ def create():
                 flash(error, 'error')
             return render_template('quiz/create.html')
 
-        # Processar upload de imagem
+        # Processar dados das questões
+        try:
+            questions = json.loads(questions_data) if questions_data else []
+        except json.JSONDecodeError:
+            flash('Erro ao processar dados das questões.', 'error')
+            return render_template('quiz/create.html')
+
+        if not questions:
+            flash('Adicione pelo menos uma questão ao quiz.', 'error')
+            return render_template('quiz/create.html')
+
+        # Processar upload de imagem do quiz
         image_filename = None
         if 'quiz_image' in request.files:
             file = request.files['quiz_image']
@@ -82,15 +82,40 @@ def create():
                 title=title,
                 description=description,
                 created_by=current_user.id,
-                image_filename=image_filename,
-                time_limit=time_limit_value
+                image_filename=image_filename
             )
 
             db.session.add(new_quiz)
+            db.session.flush()  # Para obter o ID do quiz
+
+            # Adicionar questões
+            for index, question_data in enumerate(questions):
+                # Processar imagem da questão
+                question_image = None
+                image_field_name = f'question_{index + 1}_image'
+                if image_field_name in request.files:
+                    file = request.files[image_field_name]
+                    if file and file.filename:
+                        question_image = save_uploaded_file(file)
+
+                # Criar questão
+                question = Question(
+                    quiz_id=new_quiz.id,
+                    question_text=question_data['text'],
+                    correct_answer=question_data['correctAnswer'],
+                    option_a=question_data['wrongAnswers'][0] if len(question_data['wrongAnswers']) > 0 else None,
+                    option_b=question_data['wrongAnswers'][1] if len(question_data['wrongAnswers']) > 1 else None,
+                    option_c=question_data['wrongAnswers'][2] if len(question_data['wrongAnswers']) > 2 else None,
+                    image_filename=question_image,
+                    order_index=index
+                )
+
+                db.session.add(question)
+
             db.session.commit()
 
-            flash('Quiz criado com sucesso! Agora adicione as questões.', 'success')
-            return redirect(url_for('quiz.edit', quiz_id=new_quiz.id))
+            flash('Quiz criado com sucesso!', 'success')
+            return redirect(url_for('quiz.view', quiz_id=new_quiz.id))
 
         except Exception as e:
             db.session.rollback()
@@ -100,6 +125,31 @@ def create():
             print(f"Erro ao criar quiz: {e}")
 
     return render_template('quiz/create.html')
+
+
+@quiz.route('/delete_temp_question', methods=['POST'])
+@login_required
+@admin_or_moderator_required
+def delete_temp_question():
+    """Deletar questão temporária durante criação (via AJAX)"""
+    try:
+        data = request.get_json()
+        question_id = data.get('question_id')
+        
+        # Esta é uma funcionalidade para questões temporárias
+        # Durante a criação, as questões são gerenciadas pelo JavaScript
+        # Esta rota é principalmente para compatibilidade futura
+        
+        return jsonify({
+            'success': True,
+            'message': 'Questão removida com sucesso'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Erro ao remover questão'
+        }), 500
 
 
 @quiz.route('/edit/<int:quiz_id>', methods=['GET', 'POST'])
