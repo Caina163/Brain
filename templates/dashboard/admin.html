@@ -27,7 +27,7 @@
                     <i class="bi bi-people"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ stats.total_users }}</h3>
+                    <h3>{{ stats.total_users or 0 }}</h3>
                     <p>Total de Usuários</p>
                 </div>
             </div>
@@ -39,7 +39,7 @@
                     <i class="bi bi-clock"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ stats.pending_users }}</h3>
+                    <h3>{{ stats.pending_users or 0 }}</h3>
                     <p>Cadastros Pendentes</p>
                 </div>
             </div>
@@ -51,7 +51,7 @@
                     <i class="bi bi-puzzle"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ stats.active_quizzes }}</h3>
+                    <h3>{{ stats.active_quizzes or 0 }}</h3>
                     <p>Quizzes Ativos</p>
                 </div>
             </div>
@@ -63,7 +63,7 @@
                     <i class="bi bi-play-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ stats.total_quiz_plays }}</h3>
+                    <h3>{{ stats.total_quiz_plays or 0 }}</h3>
                     <p>Jogos Realizados</p>
                 </div>
             </div>
@@ -92,7 +92,7 @@
                         <div class="col-md-3 mb-2">
                             <a href="{{ url_for('auth.pending_users') }}" class="btn btn-outline-warning w-100">
                                 <i class="bi bi-clock me-2"></i>Aprovar Cadastros
-                                {% if stats.pending_users > 0 %}
+                                {% if stats.pending_users and stats.pending_users > 0 %}
                                 <span class="badge bg-warning text-dark ms-1">{{ stats.pending_users }}</span>
                                 {% endif %}
                             </a>
@@ -122,16 +122,20 @@
                         {% for user in recent_users %}
                         <div class="user-item">
                             <div class="user-avatar">
-                                {{ user.first_name[0]|upper }}{{ user.last_name[0]|upper }}
+                                {{ user.first_name[0]|upper if user.first_name }}{{ user.last_name[0]|upper if user.last_name }}
                             </div>
                             <div class="user-info">
-                                <div class="user-name">{{ user.full_name }}</div>
+                                <div class="user-name">{{ user.full_name or user.username or 'Usuário' }}</div>
                                 <div class="user-meta">
+                                    {% if hasattr(user, 'get_user_type_color') and hasattr(user, 'get_user_type_display') %}
                                     <span class="badge bg-{{ user.get_user_type_color() }}">
                                         {{ user.get_user_type_display() }}
                                     </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ user.user_type or 'Usuário' }}</span>
+                                    {% endif %}
                                     <small class="text-muted ms-2">
-                                        {{ user.created_at.strftime('%d/%m às %H:%M') }}
+                                        {{ user.created_at.strftime('%d/%m às %H:%M') if user.created_at else 'Data não disponível' }}
                                     </small>
                                 </div>
                             </div>
@@ -161,16 +165,22 @@
                 <div class="card-body">
                     {% if popular_quizzes %}
                     <div class="quiz-list">
-                        {% for quiz, play_count in popular_quizzes %}
+                        {% for quiz_data in popular_quizzes %}
+                        {% set quiz = quiz_data[0] if quiz_data|length > 1 else quiz_data %}
+                        {% set play_count = quiz_data[1] if quiz_data|length > 1 else 0 %}
                         <div class="quiz-item">
                             <div class="quiz-info">
-                                <div class="quiz-title">{{ quiz.title }}</div>
+                                <div class="quiz-title">{{ quiz.title or 'Quiz sem título' }}</div>
                                 <div class="quiz-meta">
                                     <small class="text-muted">
+                                        {% if quiz.creator and quiz.creator.full_name %}
                                         por {{ quiz.creator.full_name }}
+                                        {% else %}
+                                        Criador não disponível
+                                        {% endif %}
                                     </small>
                                     <span class="badge bg-primary ms-2">
-                                        {{ play_count }} jogos
+                                        {{ play_count or 0 }} jogos
                                     </span>
                                 </div>
                             </div>
@@ -204,21 +214,31 @@
                         {% for result in recent_activity %}
                         <div class="activity-item">
                             <div class="activity-avatar">
-                                {{ result.user.first_name[0]|upper }}{{ result.user.last_name[0]|upper }}
+                                {% if result.user and result.user.first_name %}
+                                {{ result.user.first_name[0]|upper }}{{ result.user.last_name[0]|upper if result.user.last_name }}
+                                {% else %}
+                                U
+                                {% endif %}
                             </div>
                             <div class="activity-content">
                                 <div class="activity-text">
-                                    <strong>{{ result.user.full_name }}</strong>
+                                    <strong>{{ result.user.full_name if result.user else 'Usuário' }}</strong>
                                     completou o quiz
-                                    <strong>{{ result.quiz.title }}</strong>
+                                    <strong>{{ result.quiz.title if result.quiz else 'Quiz' }}</strong>
                                 </div>
                                 <div class="activity-meta">
+                                    {% if hasattr(result, 'grade_color') and hasattr(result, 'percentage_score') %}
                                     <span class="badge bg-{{ result.grade_color }}">
-                                        {{ result.score }}/{{ result.total_questions }}
-                                        ({{ result.percentage_score }}%)
+                                        {{ result.score or 0 }}/{{ result.total_questions or 0 }}
+                                        ({{ result.percentage_score or 0 }}%)
                                     </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">
+                                        {{ result.score or 0 }}/{{ result.total_questions or 0 }}
+                                    </span>
+                                    {% endif %}
                                     <small class="text-muted ms-2">
-                                        {{ result.completed_at.strftime('%d/%m às %H:%M') }}
+                                        {{ result.completed_at.strftime('%d/%m às %H:%M') if result.completed_at else 'Data não disponível' }}
                                     </small>
                                 </div>
                             </div>
