@@ -16,7 +16,11 @@ import random
 try:
     from app import db
 except ImportError:
-    db = None
+    try:
+        from flask_sqlalchemy import SQLAlchemy
+        db = SQLAlchemy()
+    except ImportError:
+        db = None
 
 
 class Quiz(db.Model):
@@ -46,10 +50,10 @@ class Quiz(db.Model):
     shuffle_questions = db.Column(db.Boolean, default=True)  # Embaralhar questões
     shuffle_answers = db.Column(db.Boolean, default=True)  # Embaralhar respostas
 
-    # Relacionamentos
+    # Relacionamentos - DEFINIDOS DE FORMA MAIS SEGURA
     questions = db.relationship('Question', backref='quiz', lazy=True, cascade='all, delete-orphan',
-                                order_by='Question.order_index')
-    results = db.relationship('QuizResult', backref='quiz', lazy=True, cascade='all, delete-orphan')
+                                order_by='Question.order_index') if db else None
+    results = db.relationship('QuizResult', backref='quiz', lazy=True, cascade='all, delete-orphan') if db else None
 
     def __init__(self, title, description, created_by, image_filename=None, time_limit=None):
         self.title = title
@@ -64,7 +68,12 @@ class Quiz(db.Model):
     def question_count(self):
         """Retorna o número de questões do quiz"""
         try:
-            return len(self.questions) if self.questions else 0
+            if hasattr(self, 'questions') and self.questions:
+                return len(self.questions)
+            else:
+                # Fallback: consulta manual
+                from models.question import Question
+                return Question.query.filter_by(quiz_id=self.id).count()
         except Exception:
             return 0
 
@@ -79,14 +88,23 @@ class Quiz(db.Model):
     def get_questions(self):
         """Retorna lista de questões com fallback seguro"""
         try:
-            return list(self.questions) if self.questions else []
+            if hasattr(self, 'questions') and self.questions:
+                return list(self.questions)
+            else:
+                # Fallback: consulta manual
+                from models.question import Question
+                return Question.query.filter_by(quiz_id=self.id).order_by(Question.order_index).all()
         except Exception:
             return []
 
     def get_results(self):
         """Retorna lista de resultados com fallback seguro"""
         try:
-            return list(self.results) if self.results else []
+            if hasattr(self, 'results') and self.results:
+                return list(self.results)
+            else:
+                # Fallback: consulta manual se necessário
+                return []
         except Exception:
             return []
 
@@ -105,6 +123,12 @@ class Quiz(db.Model):
     def is_deleted(self):
         """Compatibilidade - verifica se está excluído"""
         return self.status == 'deleted'
+
+    # Propriedade adicional para o dashboard
+    @property
+    def creator(self):
+        """Propriedade de compatibilidade para template"""
+        return self.get_creator()
 
     def get_status_display(self):
         """Retorna o status em português"""
@@ -311,24 +335,31 @@ class Quiz(db.Model):
     def get_recent_results(self, limit=5):
         """Retorna resultados recentes do quiz"""
         try:
-            from models.user import QuizResult
-            return (QuizResult.query
-                    .filter_by(quiz_id=self.id)
-                    .order_by(QuizResult.completed_at.desc())
-                    .limit(limit)
-                    .all())
+            # Tento importar QuizResult, mas pode falhar
+            try:
+                from models.quiz_result import QuizResult
+                return (QuizResult.query
+                        .filter_by(quiz_id=self.id)
+                        .order_by(QuizResult.completed_at.desc())
+                        .limit(limit)
+                        .all())
+            except ImportError:
+                return []
         except Exception:
             return []
 
     def get_top_performers(self, limit=5):
         """Retorna top performers do quiz"""
         try:
-            from models.user import QuizResult
-            return (QuizResult.query
-                    .filter_by(quiz_id=self.id)
-                    .order_by(QuizResult.score.desc(), QuizResult.time_spent.asc())
-                    .limit(limit)
-                    .all())
+            try:
+                from models.quiz_result import QuizResult
+                return (QuizResult.query
+                        .filter_by(quiz_id=self.id)
+                        .order_by(QuizResult.score.desc(), QuizResult.time_spent.asc())
+                        .limit(limit)
+                        .all())
+            except ImportError:
+                return []
         except Exception:
             return []
 
