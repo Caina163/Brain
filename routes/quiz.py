@@ -82,7 +82,8 @@ def create():
                 title=title,
                 description=description,
                 created_by=current_user.id,
-                image_filename=image_filename
+                image_filename=image_filename,
+                status='active'  # ✅ DEFINIR STATUS EXPLICITAMENTE
             )
 
             db.session.add(new_quiz)
@@ -478,13 +479,16 @@ def manage():
     # Query base
     query = Quiz.query
 
-    # Aplicar filtros
+    # ✅ APLICAR FILTROS CORRIGIDOS - USANDO NOVO CAMPO 'STATUS'
     if status_filter == 'active':
-        query = query.filter_by(is_active=True, is_deleted=False, is_archived=False)
+        query = query.filter_by(status='active')
     elif status_filter == 'archived':
-        query = query.filter_by(is_archived=True)
+        query = query.filter_by(status='archived')
     elif status_filter == 'deleted':
-        query = query.filter_by(is_deleted=True)
+        query = query.filter_by(status='deleted')
+    else:
+        # Para 'all', não filtramos por status excluído por padrão
+        query = query.filter(Quiz.status != 'deleted')
 
     # Filtro por criador (apenas para admin)
     if current_user.is_admin and created_by_filter != 'all':
@@ -497,8 +501,8 @@ def manage():
             except ValueError:
                 pass
     elif not current_user.is_admin:
-        # Moderadores só veem próprios quizzes
-        query = query.filter_by(created_by=current_user.id)
+        # Moderadores só veem próprios quizzes (e não excluídos)
+        query = query.filter_by(created_by=current_user.id).filter(Quiz.status != 'deleted')
 
     # Ordenar por data de criação
     quizzes = query.order_by(Quiz.created_at.desc()).all()
@@ -533,9 +537,14 @@ def archive(quiz_id):
         return redirect(url_for('quiz.manage'))
 
     try:
+        # ✅ USANDO MÉTODO CORRIGIDO DO MODEL
         quiz_obj.archive()
+        db = current_app.extensions['sqlalchemy']
+        db.session.commit()
         flash('Quiz arquivado com sucesso!', 'success')
     except Exception as e:
+        db = current_app.extensions['sqlalchemy']
+        db.session.rollback()
         flash('Erro ao arquivar quiz.', 'error')
         print(f"Erro ao arquivar quiz: {e}")
 
@@ -555,9 +564,14 @@ def delete(quiz_id):
         return redirect(url_for('quiz.manage'))
 
     try:
+        # ✅ USANDO MÉTODO CORRIGIDO DO MODEL
         quiz_obj.delete()
+        db = current_app.extensions['sqlalchemy']
+        db.session.commit()
         flash('Quiz excluído com sucesso!', 'success')
     except Exception as e:
+        db = current_app.extensions['sqlalchemy']
+        db.session.rollback()
         flash('Erro ao excluir quiz.', 'error')
         print(f"Erro ao excluir quiz: {e}")
 
@@ -577,9 +591,14 @@ def restore(quiz_id):
         return redirect(url_for('quiz.manage'))
 
     try:
+        # ✅ USANDO MÉTODO CORRIGIDO DO MODEL
         quiz_obj.restore()
+        db = current_app.extensions['sqlalchemy']
+        db.session.commit()
         flash('Quiz restaurado com sucesso!', 'success')
     except Exception as e:
+        db = current_app.extensions['sqlalchemy']
+        db.session.rollback()
         flash('Erro ao restaurar quiz.', 'error')
         print(f"Erro ao restaurar quiz: {e}")
 
