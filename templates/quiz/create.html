@@ -181,7 +181,7 @@
                                         </div>
                                         <button type="button" 
                                                 class="btn btn-sm btn-outline-danger delete-question-btn" 
-                                                onclick="confirmDeleteQuestion(1)"
+                                                onclick="event.stopPropagation(); confirmDeleteQuestion(1)"
                                                 title="Excluir questão">
                                             <i class="bi bi-x"></i>
                                         </button>
@@ -203,7 +203,7 @@
             </div>
         </div>
 
-        <!-- ✅ CAMPO HIDDEN PARA ENVIAR DADOS DAS QUESTÕES -->
+        <!-- Campo hidden para enviar dados das questões -->
         <input type="hidden" name="questions_data" id="questions_data_input">
     </form>
 </div>
@@ -416,7 +416,7 @@ let questions = {};
 let questionCounter = 1;
 let questionToDelete = null;
 
-// ✅ FUNÇÃO DE TOAST MELHORADA
+// Função de toast melhorada
 function showToast(message, type = 'info') {
     const toastElement = document.getElementById('liveToast');
     const toastIcon = document.querySelector('.toast-icon');
@@ -485,79 +485,85 @@ function setupEventListeners() {
     document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
         if (questionToDelete !== null) {
             deleteQuestion(questionToDelete);
-            bootstrap.Modal.getInstance(document.getElementById('deleteQuestionModal')).hide();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteQuestionModal'));
+            modal.hide();
         }
     });
 
-    // ✅ BOTÃO FINALIZAR CORRIGIDO
-    document.getElementById('finalize-quiz').addEventListener('click', function() {
-        console.log('=== FINALIZANDO QUIZ ===');
-        
-        // Capturar dados básicos
-        const title = document.getElementById('quiz-title').value.trim();
-        const description = document.getElementById('quiz-description').value.trim();
-        
-        console.log('Title:', title);
-        console.log('Description:', description);
-        
-        // ✅ VALIDAR APENAS TÍTULO (descrição é opcional)
-        if (!title) {
-            showToast('Título é obrigatório!', 'error');
-            return;
+    // BOTÃO FINALIZAR CORRIGIDO - EVENTO PRINCIPAL
+    document.getElementById('finalize-quiz').addEventListener('click', finalizeQuiz);
+}
+
+// FUNÇÃO FINALIZAR QUIZ SEPARADA PARA MELHOR DEBUG
+function finalizeQuiz() {
+    console.log('=== INICIANDO FINALIZAÇÃO DO QUIZ ===');
+    
+    // Capturar dados básicos do formulário
+    const title = document.getElementById('quiz-title').value.trim();
+    const description = document.getElementById('quiz-description').value.trim();
+    
+    console.log('Título:', title);
+    console.log('Descrição:', description);
+    
+    // Validação: apenas título é obrigatório
+    if (!title) {
+        showToast('Título é obrigatório!', 'error');
+        return;
+    }
+    
+    // Validar questões salvas
+    const savedQuestions = Object.values(questions).filter(q => q.saved);
+    console.log('Questões salvas:', savedQuestions.length);
+    
+    if (savedQuestions.length === 0) {
+        showToast('Salve pelo menos uma questão antes de finalizar!', 'warning');
+        return;
+    }
+
+    // Preparar array de questões para envio
+    const questionsArray = [];
+    Object.values(questions).forEach(question => {
+        if (question.saved) {
+            const answers = [];
+            
+            // Adicionar resposta correta
+            answers.push({
+                text: question.correctAnswer,
+                isCorrect: true
+            });
+            
+            // Adicionar respostas incorretas válidas
+            question.wrongAnswers.forEach(wrongAnswer => {
+                if (wrongAnswer.trim()) {
+                    answers.push({
+                        text: wrongAnswer.trim(),
+                        isCorrect: false
+                    });
+                }
+            });
+            
+            questionsArray.push({
+                question: question.text,
+                type: 'multiple_choice',
+                answers: answers
+            });
         }
-        
-        // Validar questões salvas
-        const savedQuestions = Object.values(questions).filter(q => q.saved);
-        console.log('Saved questions:', savedQuestions.length);
-        
-        if (savedQuestions.length === 0) {
-            showToast('Salve pelo menos uma questão antes de finalizar!', 'warning');
-            return;
-        }
-
-        // Preparar dados das questões
-        const questionsArray = [];
-        Object.values(questions).forEach(question => {
-            if (question.saved) {
-                const answers = [];
-                
-                // Adicionar resposta correta
-                answers.push({
-                    text: question.correctAnswer,
-                    isCorrect: true
-                });
-                
-                // Adicionar respostas incorretas
-                question.wrongAnswers.forEach(wrongAnswer => {
-                    if (wrongAnswer.trim()) {
-                        answers.push({
-                            text: wrongAnswer.trim(),
-                            isCorrect: false
-                        });
-                    }
-                });
-                
-                questionsArray.push({
-                    question: question.text,
-                    type: 'multiple_choice',
-                    answers: answers
-                });
-            }
-        });
-
-        console.log('Questions array:', questionsArray);
-
-        // ✅ COLOCAR DADOS NO CAMPO HIDDEN
-        document.getElementById('questions_data_input').value = JSON.stringify(questionsArray);
-
-        // ✅ MOSTRAR LOADING NO BOTÃO
-        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-        this.disabled = true;
-
-        // ✅ SUBMIT DO FORMULÁRIO
-        console.log('Submetendo formulário...');
-        document.getElementById('quizForm').submit();
     });
+
+    console.log('Array de questões preparado:', questionsArray);
+
+    // Colocar dados JSON no campo hidden
+    document.getElementById('questions_data_input').value = JSON.stringify(questionsArray);
+    console.log('Dados inseridos no campo hidden');
+
+    // Mostrar loading no botão
+    const finalizeBtn = document.getElementById('finalize-quiz');
+    finalizeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+    finalizeBtn.disabled = true;
+
+    // Submit do formulário
+    console.log('Submetendo formulário...');
+    document.getElementById('quizForm').submit();
 }
 
 function validateStep1() {
@@ -590,8 +596,6 @@ function goToStep1() {
 }
 
 function confirmDeleteQuestion(questionNum) {
-    event.stopPropagation();
-    
     const question = questions[questionNum];
     const questionText = question.text || 'Nova questão';
     const preview = questionText.length > 50 ? questionText.substring(0, 50) + '...' : questionText;
@@ -613,7 +617,9 @@ function deleteQuestion(questionNum) {
     delete questions[questionNum];
 
     const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
-    questionItem.remove();
+    if (questionItem) {
+        questionItem.remove();
+    }
 
     if (currentQuestion === questionNum) {
         const remainingQuestions = Object.keys(questions).map(Number).sort((a, b) => a - b);
@@ -699,7 +705,11 @@ function selectQuestion(questionNum) {
     document.querySelectorAll('.question-item').forEach(item => {
         item.classList.remove('active');
     });
-    document.querySelector(`[data-question="${questionNum}"]`).classList.add('active');
+    
+    const targetItem = document.querySelector(`[data-question="${questionNum}"]`);
+    if (targetItem) {
+        targetItem.classList.add('active');
+    }
 
     loadQuestionData(questionNum);
     updateQuestionCounter();
@@ -716,7 +726,7 @@ function loadQuestionData(questionNum) {
     container.innerHTML = '';
 
     const wrongAnswers = question.wrongAnswers.length > 0 ? question.wrongAnswers : [''];
-    wrongAnswers.forEach((answer, index) => {
+    wrongAnswers.forEach((answer) => {
         addWrongAnswerField(answer);
     });
 
@@ -751,7 +761,7 @@ function addQuestionToSidebar(questionNum) {
             </div>
             <button type="button" 
                     class="btn btn-sm btn-outline-danger delete-question-btn" 
-                    onclick="confirmDeleteQuestion(${questionNum})"
+                    onclick="event.stopPropagation(); confirmDeleteQuestion(${questionNum})"
                     title="Excluir questão">
                 <i class="bi bi-x"></i>
             </button>
@@ -764,6 +774,8 @@ function addQuestionToSidebar(questionNum) {
 
 function updateQuestionItem(questionNum) {
     const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
+    if (!questionItem) return;
+    
     const question = questions[questionNum];
 
     const preview = question.text.length > 30 ? question.text.substring(0, 30) + '...' : question.text;
