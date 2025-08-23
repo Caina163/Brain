@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Perfil - Brainchild{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Editar Perfil</h1>
+            <p class="text-muted mb-0">Atualize suas informações pessoais</p>
+        </div>
+        <a href="{{ url_for('user.profile') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Voltar ao Perfil
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Informações Pessoais</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <!-- Nome -->
+                            <div class="col-md-6 mb-3">
+                                <label for="first_name" class="form-label">Nome *</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ current_user.first_name }}" required>
+                            </div>
+
+                            <!-- Sobrenome -->
+                            <div class="col-md-6 mb-3">
+                                <label for="last_name" class="form-label">Sobrenome *</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="{{ current_user.last_name }}" required>
+                            </div>
+                        </div>
+
+                        <!-- Username (read-only) -->
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Nome de Usuário</label>
+                            <input type="text" class="form-control" id="username" 
+                                   value="{{ current_user.username }}" readonly>
+                            <div class="form-text">O nome de usuário não pode ser alterado.</div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ current_user.email }}" required>
+                        </div>
+
+                        <!-- Telefone -->
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Telefone</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   value="{{ current_user.phone or '' }}" 
+                                   placeholder="(11) 99999-9999">
+                        </div>
+
+                        <!-- User Type (read-only) -->
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Usuário</label>
+                            <div>
+                                <span class="badge bg-{{ current_user.get_user_type_color() }} fs-6 py-2 px-3">
+                                    {{ current_user.get_user_type_display() }}
+                                </span>
+                            </div>
+                            <div class="form-text">O tipo de usuário é definido pelos administradores.</div>
+                        </div>
+
+                        <!-- Senha Atual -->
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Senha Atual *</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password" 
+                                   required>
+                            <div class="form-text">Digite sua senha atual para confirmar as alterações.</div>
+                        </div>
+
+                        <!-- Divisor -->
+                        <hr class="my-4">
+
+                        <!-- Alterar Senha -->
+                        <h6 class="mb-3">Alterar Senha (opcional)</h6>
+                        
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">Nova Senha</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password" 
+                                   minlength="6">
+                            <div class="form-text">Deixe em branco para manter a senha atual.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="confirm_password" class="form-label">Confirmar Nova Senha</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ url_for('user.profile') }}" class="btn btn-secondary me-2">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check me-2"></i>Salvar Alterações
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Account Info -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Informações da Conta</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Data de Cadastro:</strong><br>
+                            <span class="text-muted">{{ current_user.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Última Atualização:</strong><br>
+                            <span class="text-muted">{{ current_user.updated_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <strong>Status da Conta:</strong><br>
+                        {% if current_user.is_approved %}
+                            <span class="badge bg-success">Aprovada</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Pendente de Aprovação</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.card {
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 20px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    padding: 12px 16px;
+    font-size: 14px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-control[readonly] {
+    background-color: #f8f9fa;
+    border-color: #e9ecef;
+    color: #6c757d;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.btn {
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.badge {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+
+.form-text {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validação de confirmação de senha
+    const newPassword = document.getElementById('new_password');
+    const confirmPassword = document.getElementById('confirm_password');
+
+    function validatePasswordConfirmation() {
+        if (newPassword.value && confirmPassword.value) {
+            if (newPassword.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity('As senhas não coincidem');
+            } else {
+                confirmPassword.setCustomValidity('');
+            }
+        }
+    }
+
+    newPassword.addEventListener('input', validatePasswordConfirmation);
+    confirmPassword.addEventListener('input', validatePasswordConfirmation);
+
+    // Formatação de telefone
+    const phoneInput = document.getElementById('phone');
+    phoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        
+        if (value.length >= 11) {
+            value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        } else if (value.length >= 7) {
+            value = value.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+        } else if (value.length >= 3) {
+            value = value.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+        }
+        
+        e.target.value = value;
+    });
+
+    // Confirmar alterações
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const currentPassword = document.getElementById('current_password').value;
+        const newPasswordValue = newPassword.value;
+        const confirmPasswordValue = confirmPassword.value;
+
+        if (!currentPassword.trim()) {
+            alert('Digite sua senha atual para confirmar as alterações.');
+            e.preventDefault();
+            return;
+        }
+
+        if (newPasswordValue && !confirmPasswordValue) {
+            alert('Confirme a nova senha.');
+            e.preventDefault();
+            return;
+        }
+
+        if (newPasswordValue !== confirmPasswordValue) {
+            alert('As senhas não coincidem.');
+            e.preventDefault();
+            return;
+        }
+
+        // Confirmar alterações
+        const hasChanges = 
+            document.getElementById('first_name').value !== '{{ current_user.first_name }}' ||
+            document.getElementById('last_name').value !== '{{ current_user.last_name }}' ||
+            document.getElementById('email').value !== '{{ current_user.email }}' ||
+            document.getElementById('phone').value !== '{{ current_user.phone or "" }}' ||
+            newPasswordValue;
+
+        if (hasChanges && !confirm('Confirma as alterações no seu perfil?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}
