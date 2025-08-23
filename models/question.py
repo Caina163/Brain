@@ -11,13 +11,16 @@ Define a estrutura das questões dos quizzes com:
 
 from datetime import datetime
 from flask import current_app
-from flask_sqlalchemy import SQLAlchemy
 
-# Obter instância do SQLAlchemy do Flask
-def get_db():
-    return current_app.extensions['sqlalchemy']
-
-db = get_db()
+# Importação segura do SQLAlchemy
+try:
+    from app import db
+except ImportError:
+    try:
+        from flask_sqlalchemy import SQLAlchemy
+        db = SQLAlchemy()
+    except ImportError:
+        db = None
 
 
 class Question(db.Model):
@@ -199,7 +202,6 @@ class Question(db.Model):
     def duplicate_to_quiz(self, target_quiz_id):
         """Duplica questão para outro quiz"""
         try:
-            db = current_app.extensions['sqlalchemy']
             new_question = Question(
                 quiz_id=target_quiz_id,
                 question_text=self.question_text,
@@ -207,11 +209,12 @@ class Question(db.Model):
                 option_a=self.option_a,
                 option_b=self.option_b,
                 option_c=self.option_c,
-                image_filename=self.image_filename,  # Nota: a imagem também seria copiada
-                order_index=0  # Será ajustado conforme necessário
+                image_filename=self.image_filename,
+                order_index=0
             )
 
-            db.session.add(new_question)
+            if db:
+                db.session.add(new_question)
             return new_question
         except Exception as e:
             print(f"Erro ao duplicar questão: {e}")
@@ -221,14 +224,13 @@ class Question(db.Model):
         """Move questão para cima na ordem"""
         try:
             if self.order_index > 0:
-                db = current_app.extensions['sqlalchemy']
                 # Encontrar questão acima
                 question_above = Question.query.filter_by(
                     quiz_id=self.quiz_id,
                     order_index=self.order_index - 1
                 ).first()
 
-                if question_above:
+                if question_above and db:
                     # Trocar posições
                     question_above.order_index = self.order_index
                     self.order_index = self.order_index - 1
@@ -237,21 +239,21 @@ class Question(db.Model):
 
             return False
         except Exception as e:
-            db.session.rollback()
+            if db:
+                db.session.rollback()
             print(f"Erro ao mover questão: {e}")
             return False
 
     def move_down(self):
         """Move questão para baixo na ordem"""
         try:
-            db = current_app.extensions['sqlalchemy']
             # Encontrar questão abaixo
             question_below = Question.query.filter_by(
                 quiz_id=self.quiz_id,
                 order_index=self.order_index + 1
             ).first()
 
-            if question_below:
+            if question_below and db:
                 # Trocar posições
                 question_below.order_index = self.order_index
                 self.order_index = self.order_index + 1
@@ -260,7 +262,8 @@ class Question(db.Model):
 
             return False
         except Exception as e:
-            db.session.rollback()
+            if db:
+                db.session.rollback()
             print(f"Erro ao mover questão: {e}")
             return False
 
