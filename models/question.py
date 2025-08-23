@@ -10,7 +10,14 @@ Define a estrutura das questões dos quizzes com:
 """
 
 from datetime import datetime
-from app import db
+from flask import current_app
+from flask_sqlalchemy import SQLAlchemy
+
+# Obter instância do SQLAlchemy do Flask
+def get_db():
+    return current_app.extensions['sqlalchemy']
+
+db = get_db()
 
 
 class Question(db.Model):
@@ -191,54 +198,71 @@ class Question(db.Model):
 
     def duplicate_to_quiz(self, target_quiz_id):
         """Duplica questão para outro quiz"""
-        new_question = Question(
-            quiz_id=target_quiz_id,
-            question_text=self.question_text,
-            correct_answer=self.correct_answer,
-            option_a=self.option_a,
-            option_b=self.option_b,
-            option_c=self.option_c,
-            image_filename=self.image_filename,  # Nota: a imagem também seria copiada
-            order_index=0  # Será ajustado conforme necessário
-        )
+        try:
+            db = current_app.extensions['sqlalchemy']
+            new_question = Question(
+                quiz_id=target_quiz_id,
+                question_text=self.question_text,
+                correct_answer=self.correct_answer,
+                option_a=self.option_a,
+                option_b=self.option_b,
+                option_c=self.option_c,
+                image_filename=self.image_filename,  # Nota: a imagem também seria copiada
+                order_index=0  # Será ajustado conforme necessário
+            )
 
-        db.session.add(new_question)
-        return new_question
+            db.session.add(new_question)
+            return new_question
+        except Exception as e:
+            print(f"Erro ao duplicar questão: {e}")
+            return None
 
     def move_up(self):
         """Move questão para cima na ordem"""
-        if self.order_index > 0:
-            # Encontrar questão acima
-            question_above = Question.query.filter_by(
-                quiz_id=self.quiz_id,
-                order_index=self.order_index - 1
-            ).first()
+        try:
+            if self.order_index > 0:
+                db = current_app.extensions['sqlalchemy']
+                # Encontrar questão acima
+                question_above = Question.query.filter_by(
+                    quiz_id=self.quiz_id,
+                    order_index=self.order_index - 1
+                ).first()
 
-            if question_above:
-                # Trocar posições
-                question_above.order_index = self.order_index
-                self.order_index = self.order_index - 1
-                db.session.commit()
-                return True
+                if question_above:
+                    # Trocar posições
+                    question_above.order_index = self.order_index
+                    self.order_index = self.order_index - 1
+                    db.session.commit()
+                    return True
 
-        return False
+            return False
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro ao mover questão: {e}")
+            return False
 
     def move_down(self):
         """Move questão para baixo na ordem"""
-        # Encontrar questão abaixo
-        question_below = Question.query.filter_by(
-            quiz_id=self.quiz_id,
-            order_index=self.order_index + 1
-        ).first()
+        try:
+            db = current_app.extensions['sqlalchemy']
+            # Encontrar questão abaixo
+            question_below = Question.query.filter_by(
+                quiz_id=self.quiz_id,
+                order_index=self.order_index + 1
+            ).first()
 
-        if question_below:
-            # Trocar posições
-            question_below.order_index = self.order_index
-            self.order_index = self.order_index + 1
-            db.session.commit()
-            return True
+            if question_below:
+                # Trocar posições
+                question_below.order_index = self.order_index
+                self.order_index = self.order_index + 1
+                db.session.commit()
+                return True
 
-        return False
+            return False
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro ao mover questão: {e}")
+            return False
 
     def get_statistics_from_results(self):
         """Retorna estatísticas da questão baseadas nos resultados dos jogos"""
