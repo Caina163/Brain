@@ -11,7 +11,14 @@ Define a estrutura dos quizzes com:
 
 from datetime import datetime
 import random
-from app import db
+from flask import current_app
+from flask_sqlalchemy import SQLAlchemy
+
+# Obter instância do SQLAlchemy do Flask
+def get_db():
+    return current_app.extensions['sqlalchemy']
+
+db = get_db()
 
 
 class Quiz(db.Model):
@@ -57,7 +64,19 @@ class Quiz(db.Model):
     @property
     def question_count(self):
         """Retorna o número de questões do quiz"""
-        return len(self.questions)
+        try:
+            return len(self.questions) if self.questions else 0
+        except Exception:
+            return 0
+
+    @property
+    def creator(self):
+        """Retorna o criador do quiz com proteção contra erros"""
+        try:
+            from models.user import User
+            return User.query.get(self.created_by)
+        except Exception:
+            return None
 
     @property
     def status(self):
@@ -109,108 +128,162 @@ class Quiz(db.Model):
         """
         prepared_questions = []
 
-        questions = list(self.questions)
-        if self.shuffle_questions:
-            random.shuffle(questions)
+        try:
+            questions = list(self.questions) if self.questions else []
+            if self.shuffle_questions:
+                random.shuffle(questions)
 
-        for index, question in enumerate(questions):
-            # Criar lista de alternativas
-            alternatives = []
+            for index, question in enumerate(questions):
+                # Criar lista de alternativas
+                alternatives = []
 
-            # Sempre adicionar a resposta correta primeiro
-            alternatives.append({
-                'text': question.correct_answer,
-                'is_correct': True,
-                'letter': 'A'  # Temporário, será ajustado depois
-            })
-
-            # Adicionar alternativas incorretas
-            incorrect_options = []
-            if question.option_a and question.option_a.strip():
-                incorrect_options.append(question.option_a)
-            if question.option_b and question.option_b.strip():
-                incorrect_options.append(question.option_b)
-            if question.option_c and question.option_c.strip():
-                incorrect_options.append(question.option_c)
-
-            for option in incorrect_options:
+                # Sempre adicionar a resposta correta primeiro
                 alternatives.append({
-                    'text': option,
-                    'is_correct': False,
-                    'letter': 'A'  # Temporário
+                    'text': question.correct_answer,
+                    'is_correct': True,
+                    'letter': 'A'  # Temporário, será ajustado depois
                 })
 
-            # EMBARALHAR RESPOSTAS - A resposta correta ficará em posição aleatória
-            if self.shuffle_answers:
-                random.shuffle(alternatives)
+                # Adicionar alternativas incorretas
+                incorrect_options = []
+                if question.option_a and question.option_a.strip():
+                    incorrect_options.append(question.option_a)
+                if question.option_b and question.option_b.strip():
+                    incorrect_options.append(question.option_b)
+                if question.option_c and question.option_c.strip():
+                    incorrect_options.append(question.option_c)
 
-            # Atribuir letras às alternativas (A, B, C, D)
-            letters = ['A', 'B', 'C', 'D']
-            for i, alternative in enumerate(alternatives):
-                alternative['letter'] = letters[i] if i < len(letters) else str(i + 1)
-                alternative['index'] = i
+                for option in incorrect_options:
+                    alternatives.append({
+                        'text': option,
+                        'is_correct': False,
+                        'letter': 'A'  # Temporário
+                    })
 
-            # Encontrar qual letra é a resposta correta
-            correct_letter = None
-            for alt in alternatives:
-                if alt['is_correct']:
-                    correct_letter = alt['letter']
-                    break
+                # EMBARALHAR RESPOSTAS - A resposta correta ficará em posição aleatória
+                if self.shuffle_answers:
+                    random.shuffle(alternatives)
 
-            question_data = {
-                'id': question.id,
-                'text': question.question_text,
-                'image_filename': question.image_filename,
-                'alternatives': alternatives,
-                'correct_letter': correct_letter,
-                'order_index': index + 1
-            }
+                # Atribuir letras às alternativas (A, B, C, D)
+                letters = ['A', 'B', 'C', 'D']
+                for i, alternative in enumerate(alternatives):
+                    alternative['letter'] = letters[i] if i < len(letters) else str(i + 1)
+                    alternative['index'] = i
 
-            prepared_questions.append(question_data)
+                # Encontrar qual letra é a resposta correta
+                correct_letter = None
+                for alt in alternatives:
+                    if alt['is_correct']:
+                        correct_letter = alt['letter']
+                        break
+
+                question_data = {
+                    'id': question.id,
+                    'text': question.question_text,
+                    'image_filename': question.image_filename,
+                    'alternatives': alternatives,
+                    'correct_letter': correct_letter,
+                    'order_index': index + 1
+                }
+
+                prepared_questions.append(question_data)
+
+        except Exception as e:
+            print(f"Erro ao preparar questões: {e}")
 
         return prepared_questions
 
     def archive(self):
         """Arquiva o quiz"""
-        self.is_archived = True
-        self.is_active = False
-        self.updated_at = datetime.utcnow()
-        db.session.commit()
+        try:
+            db = current_app.extensions['sqlalchemy']
+            self.is_archived = True
+            self.is_active = False
+            self.updated_at = datetime.utcnow()
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
 
     def delete(self):
         """Marca o quiz como excluído (soft delete)"""
-        self.is_deleted = True
-        self.is_active = False
-        self.is_archived = False
-        self.updated_at = datetime.utcnow()
-        db.session.commit()
-
-    def restore(self):
-        """Restaura quiz arquivado ou excluído"""
-        self.is_deleted = False
-        self.is_archived = False
-        self.is_active = True
-        self.updated_at = datetime.utcnow()
-        db.session.commit()
-
-    def activate(self):
-        """Ativa quiz inativo"""
-        if not self.is_deleted:
-            self.is_active = True
+        try:
+            db = current_app.extensions['sqlalchemy']
+            self.is_deleted = True
+            self.is_active = False
             self.is_archived = False
             self.updated_at = datetime.utcnow()
             db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    def restore(self):
+        """Restaura quiz arquivado ou excluído"""
+        try:
+            db = current_app.extensions['sqlalchemy']
+            self.is_deleted = False
+            self.is_archived = False
+            self.is_active = True
+            self.updated_at = datetime.utcnow()
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    def activate(self):
+        """Ativa quiz inativo"""
+        try:
+            if not self.is_deleted:
+                db = current_app.extensions['sqlalchemy']
+                self.is_active = True
+                self.is_archived = False
+                self.updated_at = datetime.utcnow()
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
 
     def deactivate(self):
         """Desativa quiz ativo"""
-        self.is_active = False
-        self.updated_at = datetime.utcnow()
-        db.session.commit()
+        try:
+            db = current_app.extensions['sqlalchemy']
+            self.is_active = False
+            self.updated_at = datetime.utcnow()
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
 
     def get_completion_stats(self):
         """Retorna estatísticas de conclusão do quiz"""
-        total_attempts = len(self.results)
-        if total_attempts == 0:
+        try:
+            total_attempts = len(self.results) if self.results else 0
+            if total_attempts == 0:
+                return {
+                    'total_attempts': 0,
+                    'average_score': 0,
+                    'best_score': 0,
+                    'worst_score': 0,
+                    'completion_rate': 0,
+                    'average_time': 0
+                }
+
+            scores = [result.score for result in self.results if hasattr(result, 'score')]
+            percentages = [result.percentage_score for result in self.results if hasattr(result, 'percentage_score')]
+            times = [result.time_spent for result in self.results if hasattr(result, 'time_spent') and result.time_spent]
+
+            stats = {
+                'total_attempts': total_attempts,
+                'average_score': round(sum(percentages) / len(percentages), 1) if percentages else 0,
+                'best_score': max(percentages) if percentages else 0,
+                'worst_score': min(percentages) if percentages else 0,
+                'completion_rate': 100,  # Como só salvamos resultados completos
+                'average_time': round(sum(times) / len(times), 0) if times else 0
+            }
+
+            return stats
+        except Exception:
             return {
                 'total_attempts': 0,
                 'average_score': 0,
@@ -220,36 +293,29 @@ class Quiz(db.Model):
                 'average_time': 0
             }
 
-        scores = [result.score for result in self.results]
-        percentages = [result.percentage_score for result in self.results]
-        times = [result.time_spent for result in self.results if result.time_spent]
-
-        stats = {
-            'total_attempts': total_attempts,
-            'average_score': round(sum(percentages) / len(percentages), 1),
-            'best_score': max(percentages),
-            'worst_score': min(percentages),
-            'completion_rate': 100,  # Como só salvamos resultados completos
-            'average_time': round(sum(times) / len(times), 0) if times else 0
-        }
-
-        return stats
-
     def get_recent_results(self, limit=5):
         """Retorna resultados recentes do quiz"""
-        return (QuizResult.query
-                .filter_by(quiz_id=self.id)
-                .order_by(QuizResult.completed_at.desc())
-                .limit(limit)
-                .all())
+        try:
+            from models.user import QuizResult
+            return (QuizResult.query
+                    .filter_by(quiz_id=self.id)
+                    .order_by(QuizResult.completed_at.desc())
+                    .limit(limit)
+                    .all())
+        except Exception:
+            return []
 
     def get_top_performers(self, limit=5):
         """Retorna top performers do quiz"""
-        return (QuizResult.query
-                .filter_by(quiz_id=self.id)
-                .order_by(QuizResult.score.desc(), QuizResult.time_spent.asc())
-                .limit(limit)
-                .all())
+        try:
+            from models.user import QuizResult
+            return (QuizResult.query
+                    .filter_by(quiz_id=self.id)
+                    .order_by(QuizResult.score.desc(), QuizResult.time_spent.asc())
+                    .limit(limit)
+                    .all())
+        except Exception:
+            return []
 
     def has_image(self):
         """Verifica se o quiz tem imagem"""
@@ -257,19 +323,22 @@ class Quiz(db.Model):
 
     def get_difficulty_level(self):
         """Calcula nível de dificuldade baseado nas estatísticas"""
-        stats = self.get_completion_stats()
-        if stats['total_attempts'] < 5:
-            return 'Não definido'
+        try:
+            stats = self.get_completion_stats()
+            if stats['total_attempts'] < 5:
+                return 'Não definido'
 
-        avg_score = stats['average_score']
-        if avg_score >= 80:
-            return 'Fácil'
-        elif avg_score >= 60:
-            return 'Médio'
-        elif avg_score >= 40:
-            return 'Difícil'
-        else:
-            return 'Muito Difícil'
+            avg_score = stats['average_score']
+            if avg_score >= 80:
+                return 'Fácil'
+            elif avg_score >= 60:
+                return 'Médio'
+            elif avg_score >= 40:
+                return 'Difícil'
+            else:
+                return 'Muito Difícil'
+        except Exception:
+            return 'Não definido'
 
     def get_difficulty_color(self):
         """Retorna cor do nível de dificuldade"""
