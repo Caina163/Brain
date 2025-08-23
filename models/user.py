@@ -12,13 +12,15 @@ from datetime import datetime
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import current_app
 
-# Usar current_app.extensions['sqlalchemy'] em vez de importação circular
-def get_db():
-    return current_app.extensions['sqlalchemy']
+# Usar a mesma instância db do app.py - MANTER IMPORTAÇÃO ORIGINAL
+try:
+    from app import db
+except ImportError:
+    # Fallback caso haja problema de importação circular
+    from flask import current_app
+    db = current_app.extensions['sqlalchemy']
 
-db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     """
@@ -41,9 +43,13 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relacionamentos com outras tabelas
-    quizzes = db.relationship('Quiz', backref='creator', lazy=True, cascade='all, delete-orphan')
-    quiz_results = db.relationship('QuizResult', backref='user', lazy=True, cascade='all, delete-orphan')
+    # Relacionamentos com outras tabelas - definir apenas se as tabelas existirem
+    try:
+        quizzes = db.relationship('Quiz', backref='creator', lazy=True, cascade='all, delete-orphan')
+        quiz_results = db.relationship('QuizResult', backref='user', lazy=True, cascade='all, delete-orphan')
+    except:
+        # Se as tabelas Quiz/QuizResult não existirem ainda, ignorar relacionamentos
+        pass
 
     def __init__(self, username, email, password_hash, first_name, last_name, phone='', user_type='student',
                  is_approved=False):
@@ -155,37 +161,72 @@ class User(UserMixin, db.Model):
 
     def get_quiz_stats(self):
         """Retorna estatísticas dos quizzes do usuário"""
-        if self.is_student:
-            # Estatísticas para alunos (quizzes jogados)
-            total_played = len(self.quiz_results)
-            if total_played == 0:
+        try:
+            if self.is_student:
+                # Estatísticas para alunos (quizzes jogados)
+                quiz_results = getattr(self, 'quiz_results', [])
+                total_played = len(quiz_results)
+                
+                if total_played == 0:
+                    return {
+                        'quizzes_played': 0,
+                        'average_score': 0,
+                        'best_score': 0,
+                        'total_questions_answered': 0
+                    }
+
+                scores = []
+                total_questions = 0
+                for r in quiz_results:
+                    if hasattr(r, 'total_questions') and r.total_questions > 0:
+                        scores.append((r.score / r.total_questions) * 100)
+                        total_questions += r.total_questions
+
+                return {
+                    'quizzes_played': total_played,
+                    'average_score': round(sum(scores) / len(scores), 1) if scores else 0,
+                    'best_score': round(max(scores), 1) if scores else 0,
+                    'total_questions_answered': total_questions
+                }
+            else:
+                # Estatísticas para moderadores/admins (quizzes criados)
+                quizzes = getattr(self, 'quizzes', [])
+                total_created = len(quizzes)
+                active_quizzes = 0
+                total_questions = 0
+                total_plays = 0
+                
+                for q in quizzes:
+                    if hasattr(q, 'is_active') and q.is_active and not getattr(q, 'is_deleted', False):
+                        active_quizzes += 1
+                    if hasattr(q, 'questions'):
+                        total_questions += len(q.questions)
+                    if hasattr(q, 'results'):
+                        total_plays += len(q.results)
+
+                return {
+                    'quizzes_created': total_created,
+                    'active_quizzes': active_quizzes,
+                    'total_questions': total_questions,
+                    'total_plays': total_plays
+                }
+        except Exception as e:
+            # Em caso de erro, retornar estatísticas vazias
+            print(f"Erro ao calcular estatísticas do usuário {self.id}: {e}")
+            if self.is_student:
                 return {
                     'quizzes_played': 0,
                     'average_score': 0,
                     'best_score': 0,
                     'total_questions_answered': 0
                 }
-
-            scores = [(r.score / r.total_questions) * 100 for r in self.quiz_results if r.total_questions > 0]
-            total_questions = sum(r.total_questions for r in self.quiz_results)
-
-            return {
-                'quizzes_played': total_played,
-                'average_score': round(sum(scores) / len(scores), 1) if scores else 0,
-                'best_score': round(max(scores), 1) if scores else 0,
-                'total_questions_answered': total_questions
-            }
-        else:
-            # Estatísticas para moderadores/admins (quizzes criados)
-            total_created = len(self.quizzes)
-            active_quizzes = len([q for q in self.quizzes if getattr(q, 'is_active', True) and not getattr(q, 'is_deleted', False)])
-
-            return {
-                'quizzes_created': total_created,
-                'active_quizzes': active_quizzes,
-                'total_questions': sum(len(getattr(q, 'questions', [])) for q in self.quizzes),
-                'total_plays': sum(len(getattr(q, 'results', [])) for q in self.quizzes)
-            }
+            else:
+                return {
+                    'quizzes_created': 0,
+                    'active_quizzes': 0,
+                    'total_questions': 0,
+                    'total_plays': 0
+                }
 
     def __repr__(self):
         return f'<User {self.username} ({self.user_type})>'
