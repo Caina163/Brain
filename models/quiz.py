@@ -63,9 +63,8 @@ class Quiz(db.Model):
         if not self.updated_at:
             self.updated_at = datetime.utcnow()
     
-    @property
-    def creator(self):
-        """Propriedade segura para acessar o criador do quiz"""
+    def get_creator(self):
+        """Método seguro para acessar o criador do quiz"""
         try:
             from models.user import User
             return User.query.get(self.created_by)
