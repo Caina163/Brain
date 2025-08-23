@@ -363,7 +363,7 @@ def delete_question(question_id):
         flash('Erro ao excluir questão.', 'error')
         print(f"Erro ao excluir questão: {e}")
 
-    return redirect(url_for('quiz.edit', quiz_id=quiz_obj.id))
+    return redirect(url_for('quiz_bp.edit', quiz_id=quiz_obj.id))
 
 
 @quiz_bp.route('/play/<int:quiz_id>')
@@ -489,7 +489,7 @@ def finish(quiz_id):
         session.pop(game_key, None)
 
         flash('Quiz concluído! Resultado salvo com sucesso.', 'success')
-        return redirect(url_for('quiz.result', result_id=result.id))
+        return redirect(url_for('quiz_bp.result', result_id=result.id))
 
     except Exception as e:
         db.session.rollback()
@@ -563,7 +563,7 @@ def archive(quiz_id):
     # Verificar permissão
     if not (current_user.is_admin or quiz_obj.created_by == current_user.id):
         flash('Você não tem permissão para arquivar este quiz.', 'error')
-        return redirect(url_for('quiz.manage'))
+        return redirect(url_for('quiz_bp.manage'))
 
     try:
         db = current_app.extensions['sqlalchemy']
@@ -578,7 +578,7 @@ def archive(quiz_id):
         flash('Erro ao arquivar quiz.', 'error')
         print(f"Erro ao arquivar quiz: {e}")
 
-    return redirect(url_for('quiz.manage'))
+    return redirect(url_for('quiz_bp.manage'))
 
 
 @quiz_bp.route('/delete/<int:quiz_id>', methods=['POST'])
@@ -591,7 +591,7 @@ def delete(quiz_id):
     # Apenas admin pode excluir
     if not current_user.is_admin:
         flash('Apenas administradores podem excluir quizzes.', 'error')
-        return redirect(url_for('quiz.manage'))
+        return redirect(url_for('quiz_bp.manage'))
 
     try:
         db = current_app.extensions['sqlalchemy']
@@ -606,7 +606,7 @@ def delete(quiz_id):
         flash('Erro ao excluir quiz.', 'error')
         print(f"Erro ao excluir quiz: {e}")
 
-    return redirect(url_for('quiz.manage'))
+    return redirect(url_for('quiz_bp.manage'))
 
 
 @quiz_bp.route('/restore/<int:quiz_id>', methods=['POST'])
@@ -619,7 +619,7 @@ def restore(quiz_id):
     # Apenas admin pode restaurar
     if not current_user.is_admin:
         flash('Apenas administradores podem restaurar quizzes.', 'error')
-        return redirect(url_for('quiz.manage'))
+        return redirect(url_for('quiz_bp.manage'))
 
     try:
         db = current_app.extensions['sqlalchemy']
@@ -635,7 +635,7 @@ def restore(quiz_id):
         flash('Erro ao restaurar quiz.', 'error')
         print(f"Erro ao restaurar quiz: {e}")
 
-    return redirect(url_for('quiz.manage'))
+    return redirect(url_for('quiz_bp.manage'))
 
 
 @quiz_bp.route('/view/<int:quiz_id>')
@@ -664,3 +664,7 @@ def view(quiz_id):
                            quiz=quiz_obj,
                            stats=stats,
                            recent_results=recent_results)
+
+
+# ✅ EXPORTAR BLUEPRINT COM NOME ESPERADO PELO __init__.py
+quiz = quiz_bp
