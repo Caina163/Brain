@@ -136,12 +136,12 @@
                                                class="form-control wrong-answer"
                                                placeholder="Resposta incorreta 1"
                                                maxlength="500">
-                                        <button type="button" class="btn btn-outline-danger" onclick="removeWrongAnswer(this)">
+                                        <button type="button" class="btn btn-outline-danger remove-answer-btn">
                                             ×
                                         </button>
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="addWrongAnswer()">
+                                <button type="button" class="btn btn-sm btn-outline-success" id="addWrongAnswerBtn">
                                     <i class="bi bi-plus"></i> Adicionar Resposta Incorreta
                                 </button>
                             </div>
@@ -152,10 +152,10 @@
                                     <i class="bi bi-arrow-left me-2"></i>Voltar
                                 </button>
                                 <div>
-                                    <button type="button" class="btn btn-success me-2" onclick="saveCurrentQuestion()">
+                                    <button type="button" class="btn btn-success me-2" id="saveCurrentQuestionBtn">
                                         <i class="bi bi-check me-1"></i>Salvar Questão
                                     </button>
-                                    <button type="button" class="btn btn-primary" onclick="addNewQuestion()">
+                                    <button type="button" class="btn btn-primary" id="addNewQuestionBtn">
                                         <i class="bi bi-plus me-1"></i>Nova Questão
                                     </button>
                                 </div>
@@ -172,7 +172,7 @@
                         </div>
                         <div class="card-body">
                             <div id="questionsList">
-                                <div class="question-item active" data-question="1" onclick="selectQuestion(1)">
+                                <div class="question-item active" data-question="1">
                                     <div class="question-number">01</div>
                                     <div class="question-preview">Nova questão</div>
                                     <div class="question-actions">
@@ -181,7 +181,7 @@
                                         </div>
                                         <button type="button" 
                                                 class="btn btn-sm btn-outline-danger delete-question-btn" 
-                                                onclick="event.stopPropagation(); confirmDeleteQuestion(1)"
+                                                data-question="1"
                                                 title="Excluir questão">
                                             <i class="bi bi-x"></i>
                                         </button>
@@ -411,465 +411,502 @@
 
 {% block extra_js %}
 <script>
-let currentQuestion = 1;
-let questions = {};
-let questionCounter = 1;
-let questionToDelete = null;
-
-// Função de toast melhorada
-function showToast(message, type = 'info') {
-    const toastElement = document.getElementById('liveToast');
-    const toastIcon = document.querySelector('.toast-icon');
-    const toastTitle = document.querySelector('.toast-title');
-    const toastMessage = document.getElementById('toast-message');
-    
-    // Configurar ícone e cor baseado no tipo
-    switch(type) {
-        case 'success':
-            toastIcon.className = 'bi bi-check-circle-fill me-2 toast-icon text-success';
-            toastTitle.textContent = 'Sucesso';
-            break;
-        case 'error':
-            toastIcon.className = 'bi bi-exclamation-triangle-fill me-2 toast-icon text-danger';
-            toastTitle.textContent = 'Erro';
-            break;
-        case 'warning':
-            toastIcon.className = 'bi bi-exclamation-triangle-fill me-2 toast-icon text-warning';
-            toastTitle.textContent = 'Atenção';
-            break;
-        default:
-            toastIcon.className = 'bi bi-info-circle-fill me-2 toast-icon text-primary';
-            toastTitle.textContent = 'Informação';
+// SISTEMA DE CRIAÇÃO DE QUIZ - CORRIGIDO DEFINITIVAMENTE
+class QuizCreator {
+    constructor() {
+        this.currentQuestion = 1;
+        this.questions = {};
+        this.questionCounter = 1;
+        this.questionToDelete = null;
+        
+        this.initializeFirstQuestion();
+        this.setupEventListeners();
+        
+        console.log('QuizCreator inicializado com sucesso');
     }
-    
-    toastMessage.textContent = message;
-    
-    const toast = new bootstrap.Toast(toastElement);
-    toast.show();
-}
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize first question
-    questions[1] = {
-        image: null,
-        text: '',
-        correctAnswer: '',
-        wrongAnswers: [''],
-        saved: false
-    };
+    initializeFirstQuestion() {
+        this.questions[1] = {
+            image: null,
+            text: '',
+            correctAnswer: '',
+            wrongAnswers: [''],
+            saved: false
+        };
+    }
 
-    setupEventListeners();
-});
+    setupEventListeners() {
+        // Navigation between steps
+        document.getElementById('nextToStep2').addEventListener('click', () => this.goToStep2());
+        document.getElementById('backToStep1').addEventListener('click', () => this.goToStep1());
 
-function setupEventListeners() {
-    // Step navigation
-    document.getElementById('nextToStep2').addEventListener('click', goToStep2);
-    document.getElementById('backToStep1').addEventListener('click', goToStep1);
+        // Question management
+        document.getElementById('saveCurrentQuestionBtn').addEventListener('click', () => this.saveCurrentQuestion());
+        document.getElementById('addNewQuestionBtn').addEventListener('click', () => this.addNewQuestion());
+        document.getElementById('finalize-quiz').addEventListener('click', () => this.finalizeQuiz());
 
-    // Image previews
-    document.getElementById('quiz_image').addEventListener('change', function() {
-        showImagePreview(this, 'quiz-image-preview');
-    });
+        // Wrong answers management
+        document.getElementById('addWrongAnswerBtn').addEventListener('click', () => this.addWrongAnswer());
 
-    document.getElementById('questionImage').addEventListener('change', function() {
-        showImagePreview(this, 'question-image-preview');
-        if (questions[currentQuestion]) {
-            questions[currentQuestion].image = this.files[0];
+        // Image previews
+        document.getElementById('quiz_image').addEventListener('change', (e) => {
+            this.showImagePreview(e.target, 'quiz-image-preview');
+        });
+
+        document.getElementById('questionImage').addEventListener('change', (e) => {
+            this.showImagePreview(e.target, 'question-image-preview');
+            if (this.questions[this.currentQuestion]) {
+                this.questions[this.currentQuestion].image = e.target.files[0];
+            }
+        });
+
+        // Form validation
+        document.getElementById('quiz-title').addEventListener('input', () => this.validateStep1());
+
+        // Modal confirmation
+        document.getElementById('confirmDeleteBtn').addEventListener('click', () => this.confirmDelete());
+
+        // Delegated event listeners for dynamic content
+        document.addEventListener('click', (e) => this.handleDelegatedEvents(e));
+        
+        console.log('Event listeners configurados');
+    }
+
+    handleDelegatedEvents(e) {
+        // Question item clicks
+        if (e.target.closest('.question-item') && !e.target.closest('.delete-question-btn')) {
+            const questionItem = e.target.closest('.question-item');
+            const questionNum = parseInt(questionItem.dataset.question);
+            this.selectQuestion(questionNum);
         }
-    });
 
-    // Form validation
-    document.getElementById('quiz-title').addEventListener('input', validateStep1);
-
-    // Modal de confirmação
-    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-        if (questionToDelete !== null) {
-            deleteQuestion(questionToDelete);
-            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteQuestionModal'));
-            modal.hide();
+        // Delete question button clicks
+        if (e.target.closest('.delete-question-btn')) {
+            e.stopPropagation();
+            const btn = e.target.closest('.delete-question-btn');
+            const questionNum = parseInt(btn.dataset.question);
+            this.confirmDeleteQuestion(questionNum);
         }
-    });
 
-    // BOTÃO FINALIZAR CORRIGIDO - EVENTO PRINCIPAL
-    document.getElementById('finalize-quiz').addEventListener('click', finalizeQuiz);
-}
-
-// FUNÇÃO FINALIZAR QUIZ SEPARADA PARA MELHOR DEBUG
-function finalizeQuiz() {
-    console.log('=== INICIANDO FINALIZAÇÃO DO QUIZ ===');
-    
-    // Capturar dados básicos do formulário
-    const title = document.getElementById('quiz-title').value.trim();
-    const description = document.getElementById('quiz-description').value.trim();
-    
-    console.log('Título:', title);
-    console.log('Descrição:', description);
-    
-    // Validação: apenas título é obrigatório
-    if (!title) {
-        showToast('Título é obrigatório!', 'error');
-        return;
-    }
-    
-    // Validar questões salvas
-    const savedQuestions = Object.values(questions).filter(q => q.saved);
-    console.log('Questões salvas:', savedQuestions.length);
-    
-    if (savedQuestions.length === 0) {
-        showToast('Salve pelo menos uma questão antes de finalizar!', 'warning');
-        return;
-    }
-
-    // Preparar array de questões para envio
-    const questionsArray = [];
-    Object.values(questions).forEach(question => {
-        if (question.saved) {
-            const answers = [];
-            
-            // Adicionar resposta correta
-            answers.push({
-                text: question.correctAnswer,
-                isCorrect: true
-            });
-            
-            // Adicionar respostas incorretas válidas
-            question.wrongAnswers.forEach(wrongAnswer => {
-                if (wrongAnswer.trim()) {
-                    answers.push({
-                        text: wrongAnswer.trim(),
-                        isCorrect: false
-                    });
-                }
-            });
-            
-            questionsArray.push({
-                question: question.text,
-                type: 'multiple_choice',
-                answers: answers
-            });
+        // Remove wrong answer button clicks
+        if (e.target.closest('.remove-answer-btn')) {
+            this.removeWrongAnswer(e.target.closest('.remove-answer-btn'));
         }
-    });
-
-    console.log('Array de questões preparado:', questionsArray);
-
-    // Colocar dados JSON no campo hidden
-    document.getElementById('questions_data_input').value = JSON.stringify(questionsArray);
-    console.log('Dados inseridos no campo hidden');
-
-    // Mostrar loading no botão
-    const finalizeBtn = document.getElementById('finalize-quiz');
-    finalizeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-    finalizeBtn.disabled = true;
-
-    // Submit do formulário
-    console.log('Submetendo formulário...');
-    document.getElementById('quizForm').submit();
-}
-
-function validateStep1() {
-    const title = document.getElementById('quiz-title').value.trim();
-    const nextBtn = document.getElementById('nextToStep2');
-
-    nextBtn.disabled = title.length < 3;
-}
-
-function goToStep2() {
-    const title = document.getElementById('quiz-title').value.trim();
-    if (title.length < 3) {
-        showToast('Por favor, preencha o título do quiz', 'error');
-        return;
     }
 
-    document.getElementById('step1').style.display = 'none';
-    document.getElementById('step2').style.display = 'block';
-
-    document.getElementById('step1-indicator').classList.remove('active');
-    document.getElementById('step2-indicator').classList.add('active');
-}
-
-function goToStep1() {
-    document.getElementById('step2').style.display = 'none';
-    document.getElementById('step1').style.display = 'block';
-
-    document.getElementById('step2-indicator').classList.remove('active');
-    document.getElementById('step1-indicator').classList.add('active');
-}
-
-function confirmDeleteQuestion(questionNum) {
-    const question = questions[questionNum];
-    const questionText = question.text || 'Nova questão';
-    const preview = questionText.length > 50 ? questionText.substring(0, 50) + '...' : questionText;
-    
-    questionToDelete = questionNum;
-    document.getElementById('questionToDeletePreview').textContent = `Questão: "${preview}"`;
-    
-    const modal = new bootstrap.Modal(document.getElementById('deleteQuestionModal'));
-    modal.show();
-}
-
-function deleteQuestion(questionNum) {
-    const totalQuestions = Object.keys(questions).length;
-    if (totalQuestions <= 1) {
-        showToast('Deve haver pelo menos uma questão no quiz', 'warning');
-        return;
+    showToast(message, type = 'info') {
+        const toastElement = document.getElementById('liveToast');
+        const toastIcon = document.querySelector('.toast-icon');
+        const toastTitle = document.querySelector('.toast-title');
+        const toastMessage = document.getElementById('toast-message');
+        
+        switch(type) {
+            case 'success':
+                toastIcon.className = 'bi bi-check-circle-fill me-2 toast-icon text-success';
+                toastTitle.textContent = 'Sucesso';
+                break;
+            case 'error':
+                toastIcon.className = 'bi bi-exclamation-triangle-fill me-2 toast-icon text-danger';
+                toastTitle.textContent = 'Erro';
+                break;
+            case 'warning':
+                toastIcon.className = 'bi bi-exclamation-triangle-fill me-2 toast-icon text-warning';
+                toastTitle.textContent = 'Atenção';
+                break;
+            default:
+                toastIcon.className = 'bi bi-info-circle-fill me-2 toast-icon text-primary';
+                toastTitle.textContent = 'Informação';
+        }
+        
+        toastMessage.textContent = message;
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
     }
 
-    delete questions[questionNum];
-
-    const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
-    if (questionItem) {
-        questionItem.remove();
+    validateStep1() {
+        const title = document.getElementById('quiz-title').value.trim();
+        const nextBtn = document.getElementById('nextToStep2');
+        nextBtn.disabled = title.length < 3;
     }
 
-    if (currentQuestion === questionNum) {
-        const remainingQuestions = Object.keys(questions).map(Number).sort((a, b) => a - b);
-        currentQuestion = remainingQuestions[0];
-        selectQuestion(currentQuestion);
+    goToStep2() {
+        const title = document.getElementById('quiz-title').value.trim();
+        if (title.length < 3) {
+            this.showToast('Por favor, preencha o título do quiz', 'error');
+            return;
+        }
+
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('step2').style.display = 'block';
+        document.getElementById('step1-indicator').classList.remove('active');
+        document.getElementById('step2-indicator').classList.add('active');
     }
 
-    updateQuestionCounter();
-
-    const hasEnoughSavedQuestions = Object.values(questions).some(q => q.saved);
-    document.getElementById('finalize-quiz').disabled = !hasEnoughSavedQuestions;
-
-    questionToDelete = null;
-    showToast('Questão removida com sucesso!', 'success');
-}
-
-function saveCurrentQuestion() {
-    const questionText = document.getElementById('questionText').value.trim();
-    const correctAnswer = document.getElementById('correctAnswer').value.trim();
-    const wrongAnswers = Array.from(document.querySelectorAll('.wrong-answer'))
-        .map(input => input.value.trim())
-        .filter(answer => answer.length > 0);
-
-    if (!questionText) {
-        showToast('Por favor, digite o texto da questão', 'error');
-        return;
+    goToStep1() {
+        document.getElementById('step2').style.display = 'none';
+        document.getElementById('step1').style.display = 'block';
+        document.getElementById('step2-indicator').classList.remove('active');
+        document.getElementById('step1-indicator').classList.add('active');
     }
 
-    if (!correctAnswer) {
-        showToast('Por favor, digite a resposta correta', 'error');
-        return;
-    }
-
-    if (wrongAnswers.length === 0) {
-        showToast('Por favor, adicione pelo menos uma resposta incorreta', 'error');
-        return;
-    }
-
-    questions[currentQuestion] = {
-        image: document.getElementById('questionImage').files[0] || null,
-        text: questionText,
-        correctAnswer: correctAnswer,
-        wrongAnswers: wrongAnswers,
-        saved: true
-    };
-
-    updateQuestionItem(currentQuestion);
-    document.getElementById('finalize-quiz').disabled = !Object.values(questions).some(q => q.saved);
-
-    showToast('Questão salva com sucesso!', 'success');
-}
-
-function addNewQuestion() {
-    questionCounter++;
-    currentQuestion = questionCounter;
-
-    questions[currentQuestion] = {
-        image: null,
-        text: '',
-        correctAnswer: '',
-        wrongAnswers: [''],
-        saved: false
-    };
-
-    addQuestionToSidebar(currentQuestion);
-    clearQuestionForm();
-    updateQuestionCounter();
-    selectQuestion(currentQuestion);
-}
-
-function selectQuestion(questionNum) {
-    const currentText = document.getElementById('questionText').value.trim();
-    if (currentText && questions[currentQuestion]) {
-        questions[currentQuestion].text = currentText;
-        questions[currentQuestion].correctAnswer = document.getElementById('correctAnswer').value.trim();
-        questions[currentQuestion].wrongAnswers = Array.from(document.querySelectorAll('.wrong-answer'))
+    saveCurrentQuestion() {
+        const questionText = document.getElementById('questionText').value.trim();
+        const correctAnswer = document.getElementById('correctAnswer').value.trim();
+        const wrongAnswers = Array.from(document.querySelectorAll('.wrong-answer'))
             .map(input => input.value.trim())
             .filter(answer => answer.length > 0);
-    }
 
-    currentQuestion = questionNum;
-
-    document.querySelectorAll('.question-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    
-    const targetItem = document.querySelector(`[data-question="${questionNum}"]`);
-    if (targetItem) {
-        targetItem.classList.add('active');
-    }
-
-    loadQuestionData(questionNum);
-    updateQuestionCounter();
-    document.getElementById('currentQuestionTitle').textContent = `Questão ${questionNum}`;
-}
-
-function loadQuestionData(questionNum) {
-    const question = questions[questionNum];
-
-    document.getElementById('questionText').value = question.text || '';
-    document.getElementById('correctAnswer').value = question.correctAnswer || '';
-
-    const container = document.getElementById('wrongAnswersContainer');
-    container.innerHTML = '';
-
-    const wrongAnswers = question.wrongAnswers.length > 0 ? question.wrongAnswers : [''];
-    wrongAnswers.forEach((answer) => {
-        addWrongAnswerField(answer);
-    });
-
-    document.getElementById('question-image-preview').innerHTML = '';
-    document.getElementById('questionImage').value = '';
-}
-
-function clearQuestionForm() {
-    document.getElementById('questionText').value = '';
-    document.getElementById('correctAnswer').value = '';
-    document.getElementById('questionImage').value = '';
-    document.getElementById('question-image-preview').innerHTML = '';
-
-    const container = document.getElementById('wrongAnswersContainer');
-    container.innerHTML = '';
-    addWrongAnswerField('');
-}
-
-function addQuestionToSidebar(questionNum) {
-    const questionsList = document.getElementById('questionsList');
-    const questionItem = document.createElement('div');
-    questionItem.className = 'question-item';
-    questionItem.setAttribute('data-question', questionNum);
-    questionItem.onclick = () => selectQuestion(questionNum);
-
-    questionItem.innerHTML = `
-        <div class="question-number">${questionNum.toString().padStart(2, '0')}</div>
-        <div class="question-preview">Nova questão</div>
-        <div class="question-actions">
-            <div class="question-status">
-                <i class="bi bi-circle text-warning"></i>
-            </div>
-            <button type="button" 
-                    class="btn btn-sm btn-outline-danger delete-question-btn" 
-                    onclick="event.stopPropagation(); confirmDeleteQuestion(${questionNum})"
-                    title="Excluir questão">
-                <i class="bi bi-x"></i>
-            </button>
-        </div>
-    `;
-
-    questionsList.appendChild(questionItem);
-    updateQuestionCounter();
-}
-
-function updateQuestionItem(questionNum) {
-    const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
-    if (!questionItem) return;
-    
-    const question = questions[questionNum];
-
-    const preview = question.text.length > 30 ? question.text.substring(0, 30) + '...' : question.text;
-    questionItem.querySelector('.question-preview').textContent = preview || 'Nova questão';
-
-    const statusIcon = questionItem.querySelector('.question-status i');
-    if (question.saved) {
-        statusIcon.className = 'bi bi-check-circle text-success';
-    } else {
-        statusIcon.className = 'bi bi-circle text-warning';
-    }
-}
-
-function updateQuestionCounter() {
-    document.getElementById('currentQuestionNum').textContent = currentQuestion;
-    document.getElementById('totalQuestions').textContent = Object.keys(questions).length;
-}
-
-function addWrongAnswer() {
-    addWrongAnswerField('');
-}
-
-function addWrongAnswerField(value = '') {
-    const container = document.getElementById('wrongAnswersContainer');
-    const wrongAnswerCount = container.children.length;
-
-    if (wrongAnswerCount >= 5) {
-        showToast('Máximo de 5 respostas incorretas por questão', 'warning');
-        return;
-    }
-
-    const newAnswer = document.createElement('div');
-    newAnswer.className = 'input-group mb-2';
-    newAnswer.innerHTML = `
-        <input type="text"
-               class="form-control wrong-answer"
-               placeholder="Resposta incorreta ${wrongAnswerCount + 1}"
-               value="${value}"
-               maxlength="500">
-        <button type="button" class="btn btn-outline-danger" onclick="removeWrongAnswer(this)">
-            ×
-        </button>
-    `;
-
-    container.appendChild(newAnswer);
-}
-
-function removeWrongAnswer(button) {
-    const container = document.getElementById('wrongAnswersContainer');
-    if (container.children.length <= 1) {
-        showToast('Deve haver pelo menos uma resposta incorreta', 'warning');
-        return;
-    }
-
-    button.closest('.input-group').remove();
-}
-
-function showImagePreview(input, containerId) {
-    const file = input.files[0];
-    const container = document.getElementById(containerId);
-
-    container.innerHTML = '';
-
-    if (file) {
-        if (!file.type.startsWith('image/')) {
-            showToast('Por favor, selecione apenas arquivos de imagem', 'error');
-            input.value = '';
+        // Validation
+        if (!questionText) {
+            this.showToast('Por favor, digite o texto da questão', 'error');
             return;
         }
 
-        if (file.size > 16 * 1024 * 1024) {
-            showToast('Arquivo muito grande. Máximo 16MB', 'error');
-            input.value = '';
+        if (!correctAnswer) {
+            this.showToast('Por favor, digite a resposta correta', 'error');
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            container.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <img src="${e.target.result}" class="image-preview me-3">
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage('${containerId}', '${input.id}')">
-                        <i class="bi bi-x"></i> Remover
-                    </button>
-                </div>
-            `;
+        if (wrongAnswers.length === 0) {
+            this.showToast('Por favor, adicione pelo menos uma resposta incorreta', 'error');
+            return;
+        }
+
+        // Save question
+        this.questions[this.currentQuestion] = {
+            image: document.getElementById('questionImage').files[0] || null,
+            text: questionText,
+            correctAnswer: correctAnswer,
+            wrongAnswers: wrongAnswers,
+            saved: true
         };
-        reader.readAsDataURL(file);
+
+        this.updateQuestionItem(this.currentQuestion);
+        this.updateFinalizeButton();
+        this.showToast('Questão salva com sucesso!', 'success');
+    }
+
+    addNewQuestion() {
+        this.questionCounter++;
+        this.currentQuestion = this.questionCounter;
+
+        this.questions[this.currentQuestion] = {
+            image: null,
+            text: '',
+            correctAnswer: '',
+            wrongAnswers: [''],
+            saved: false
+        };
+
+        this.addQuestionToSidebar(this.currentQuestion);
+        this.clearQuestionForm();
+        this.updateQuestionCounter();
+        this.selectQuestion(this.currentQuestion);
+    }
+
+    selectQuestion(questionNum) {
+        // Save current question data if changed
+        const currentText = document.getElementById('questionText').value.trim();
+        if (currentText && this.questions[this.currentQuestion]) {
+            this.questions[this.currentQuestion].text = currentText;
+            this.questions[this.currentQuestion].correctAnswer = document.getElementById('correctAnswer').value.trim();
+            this.questions[this.currentQuestion].wrongAnswers = Array.from(document.querySelectorAll('.wrong-answer'))
+                .map(input => input.value.trim())
+                .filter(answer => answer.length > 0);
+        }
+
+        this.currentQuestion = questionNum;
+
+        // Update UI
+        document.querySelectorAll('.question-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        const targetItem = document.querySelector(`[data-question="${questionNum}"]`);
+        if (targetItem) {
+            targetItem.classList.add('active');
+        }
+
+        this.loadQuestionData(questionNum);
+        this.updateQuestionCounter();
+        document.getElementById('currentQuestionTitle').textContent = `Questão ${questionNum}`;
+    }
+
+    loadQuestionData(questionNum) {
+        const question = this.questions[questionNum];
+        if (!question) return;
+
+        document.getElementById('questionText').value = question.text || '';
+        document.getElementById('correctAnswer').value = question.correctAnswer || '';
+
+        // Load wrong answers
+        const container = document.getElementById('wrongAnswersContainer');
+        container.innerHTML = '';
+
+        const wrongAnswers = question.wrongAnswers.length > 0 ? question.wrongAnswers : [''];
+        wrongAnswers.forEach((answer) => {
+            this.addWrongAnswerField(answer);
+        });
+
+        // Clear image preview
+        document.getElementById('question-image-preview').innerHTML = '';
+        document.getElementById('questionImage').value = '';
+    }
+
+    clearQuestionForm() {
+        document.getElementById('questionText').value = '';
+        document.getElementById('correctAnswer').value = '';
+        document.getElementById('questionImage').value = '';
+        document.getElementById('question-image-preview').innerHTML = '';
+
+        const container = document.getElementById('wrongAnswersContainer');
+        container.innerHTML = '';
+        this.addWrongAnswerField('');
+    }
+
+    confirmDeleteQuestion(questionNum) {
+        const question = this.questions[questionNum];
+        const questionText = question ? question.text : 'Nova questão';
+        const preview = questionText.length > 50 ? questionText.substring(0, 50) + '...' : questionText;
+        
+        this.questionToDelete = questionNum;
+        document.getElementById('questionToDeletePreview').textContent = `Questão: "${preview}"`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteQuestionModal'));
+        modal.show();
+    }
+
+    confirmDelete() {
+        if (this.questionToDelete !== null) {
+            this.deleteQuestion(this.questionToDelete);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteQuestionModal'));
+            modal.hide();
+            this.questionToDelete = null;
+        }
+    }
+
+    deleteQuestion(questionNum) {
+        const totalQuestions = Object.keys(this.questions).length;
+        if (totalQuestions <= 1) {
+            this.showToast('Deve haver pelo menos uma questão no quiz', 'warning');
+            return;
+        }
+
+        delete this.questions[questionNum];
+
+        const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
+        if (questionItem) {
+            questionItem.remove();
+        }
+
+        if (this.currentQuestion === questionNum) {
+            const remainingQuestions = Object.keys(this.questions).map(Number).sort((a, b) => a - b);
+            this.currentQuestion = remainingQuestions[0];
+            this.selectQuestion(this.currentQuestion);
+        }
+
+        this.updateQuestionCounter();
+        this.updateFinalizeButton();
+        this.showToast('Questão removida com sucesso!', 'success');
+    }
+
+    addQuestionToSidebar(questionNum) {
+        const questionsList = document.getElementById('questionsList');
+        const questionItem = document.createElement('div');
+        questionItem.className = 'question-item';
+        questionItem.setAttribute('data-question', questionNum);
+
+        questionItem.innerHTML = `
+            <div class="question-number">${questionNum.toString().padStart(2, '0')}</div>
+            <div class="question-preview">Nova questão</div>
+            <div class="question-actions">
+                <div class="question-status">
+                    <i class="bi bi-circle text-warning"></i>
+                </div>
+                <button type="button" 
+                        class="btn btn-sm btn-outline-danger delete-question-btn" 
+                        data-question="${questionNum}"
+                        title="Excluir questão">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        `;
+
+        questionsList.appendChild(questionItem);
+        this.updateQuestionCounter();
+    }
+
+    updateQuestionItem(questionNum) {
+        const questionItem = document.querySelector(`[data-question="${questionNum}"]`);
+        if (!questionItem) return;
+        
+        const question = this.questions[questionNum];
+        const preview = question.text.length > 30 ? question.text.substring(0, 30) + '...' : question.text;
+        
+        questionItem.querySelector('.question-preview').textContent = preview || 'Nova questão';
+
+        const statusIcon = questionItem.querySelector('.question-status i');
+        if (question.saved) {
+            statusIcon.className = 'bi bi-check-circle text-success';
+        } else {
+            statusIcon.className = 'bi bi-circle text-warning';
+        }
+    }
+
+    updateQuestionCounter() {
+        document.getElementById('currentQuestionNum').textContent = this.currentQuestion;
+        document.getElementById('totalQuestions').textContent = Object.keys(this.questions).length;
+    }
+
+    updateFinalizeButton() {
+        const hasEnoughSavedQuestions = Object.values(this.questions).some(q => q.saved);
+        document.getElementById('finalize-quiz').disabled = !hasEnoughSavedQuestions;
+    }
+
+    addWrongAnswer() {
+        this.addWrongAnswerField('');
+    }
+
+    addWrongAnswerField(value = '') {
+        const container = document.getElementById('wrongAnswersContainer');
+        const wrongAnswerCount = container.children.length;
+
+        if (wrongAnswerCount >= 5) {
+            this.showToast('Máximo de 5 respostas incorretas por questão', 'warning');
+            return;
+        }
+
+        const newAnswer = document.createElement('div');
+        newAnswer.className = 'input-group mb-2';
+        newAnswer.innerHTML = `
+            <input type="text"
+                   class="form-control wrong-answer"
+                   placeholder="Resposta incorreta ${wrongAnswerCount + 1}"
+                   value="${value}"
+                   maxlength="500">
+            <button type="button" class="btn btn-outline-danger remove-answer-btn">
+                ×
+            </button>
+        `;
+
+        container.appendChild(newAnswer);
+    }
+
+    removeWrongAnswer(button) {
+        const container = document.getElementById('wrongAnswersContainer');
+        if (container.children.length <= 1) {
+            this.showToast('Deve haver pelo menos uma resposta incorreta', 'warning');
+            return;
+        }
+
+        button.closest('.input-group').remove();
+    }
+
+    showImagePreview(input, containerId) {
+        const file = input.files[0];
+        const container = document.getElementById(containerId);
+
+        container.innerHTML = '';
+
+        if (file) {
+            if (!file.type.startsWith('image/')) {
+                this.showToast('Por favor, selecione apenas arquivos de imagem', 'error');
+                input.value = '';
+                return;
+            }
+
+            if (file.size > 16 * 1024 * 1024) {
+                this.showToast('Arquivo muito grande. Máximo 16MB', 'error');
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                container.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <img src="${e.target.result}" class="image-preview me-3">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="quizCreator.removeImage('${containerId}', '${input.id}')">
+                            <i class="bi bi-x"></i> Remover
+                        </button>
+                    </div>
+                `;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    removeImage(containerId, inputId) {
+        document.getElementById(containerId).innerHTML = '';
+        document.getElementById(inputId).value = '';
+    }
+
+    finalizeQuiz() {
+        console.log('=== INICIANDO FINALIZAÇÃO DO QUIZ ===');
+        
+        const title = document.getElementById('quiz-title').value.trim();
+        const description = document.getElementById('quiz-description').value.trim();
+        
+        console.log('Título:', title);
+        console.log('Descrição:', description);
+        
+        if (!title) {
+            this.showToast('Título é obrigatório!', 'error');
+            return;
+        }
+        
+        const savedQuestions = Object.values(this.questions).filter(q => q.saved);
+        console.log('Questões salvas:', savedQuestions.length);
+        
+        if (savedQuestions.length === 0) {
+            this.showToast('Salve pelo menos uma questão antes de finalizar!', 'warning');
+            return;
+        }
+
+        const questionsArray = [];
+        Object.values(this.questions).forEach(question => {
+            if (question.saved) {
+                const answers = [];
+                
+                answers.push({
+                    text: question.correctAnswer,
+                    isCorrect: true
+                });
+                
+                question.wrongAnswers.forEach(wrongAnswer => {
+                    if (wrongAnswer.trim()) {
+                        answers.push({
+                            text: wrongAnswer.trim(),
+                            isCorrect: false
+                        });
+                    }
+                });
+                
+                questionsArray.push({
+                    question: question.text,
+                    type: 'multiple_choice',
+                    answers: answers
+                });
+            }
+        });
+
+        console.log('Array de questões preparado:', questionsArray);
+
+        document.getElementById('questions_data_input').value = JSON.stringify(questionsArray);
+        console.log('Dados inseridos no campo hidden');
+
+        const finalizeBtn = document.getElementById('finalize-quiz');
+        finalizeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+        finalizeBtn.disabled = true;
+
+        console.log('Submetendo formulário...');
+        document.getElementById('quizForm').submit();
     }
 }
 
-function removeImage(containerId, inputId) {
-    document.getElementById(containerId).innerHTML = '';
-    document.getElementById(inputId).value = '';
-}
+// Initialize when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    window.quizCreator = new QuizCreator();
+});
 </script>
 {% endblock %}
