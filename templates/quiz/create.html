@@ -202,6 +202,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- ✅ CAMPO HIDDEN PARA ENVIAR DADOS DAS QUESTÕES -->
+        <input type="hidden" name="questions_data" id="questions_data_input">
     </form>
 </div>
 
@@ -755,46 +758,40 @@ function removeImage(containerId, inputId) {
     document.getElementById(inputId).value = '';
 }
 
-// Form submission
+// ✅ FORM SUBMISSION CORRIGIDO - AGORA FAZ POST REAL!
 document.getElementById('quizForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-
+    e.preventDefault(); // Prevenir submit padrão para validar primeiro
+    
     const savedQuestions = Object.values(questions).filter(q => q.saved);
     if (savedQuestions.length === 0) {
         alert('Por favor, salve pelo menos uma questão antes de finalizar');
         return;
     }
 
-    // Prepare form data
-    const formData = new FormData();
-    formData.append('title', document.getElementById('title').value);
-    formData.append('description', document.getElementById('description').value);
-
-    const quizImage = document.getElementById('quiz_image').files[0];
-    if (quizImage) {
-        formData.append('quiz_image', quizImage);
-    }
-
-    formData.append('questions_data', JSON.stringify(savedQuestions));
-
-    // Add question images
-    Object.entries(questions).forEach(([index, question]) => {
-        if (question.saved && question.image) {
-            formData.append(`question_${index}_image`, question.image);
+    // ✅ PREPARAR DADOS E FAZER SUBMIT REAL
+    const questionsArray = [];
+    Object.values(questions).forEach(question => {
+        if (question.saved) {
+            questionsArray.push({
+                text: question.text,
+                correctAnswer: question.correctAnswer,
+                wrongAnswers: question.wrongAnswers
+            });
         }
     });
 
-    // Submit
+    // ✅ COLOCAR DADOS NO CAMPO HIDDEN
+    document.getElementById('questions_data_input').value = JSON.stringify(questionsArray);
+
+    // ✅ MOSTRAR LOADING
     const submitBtn = document.getElementById('finalSubmit');
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
     submitBtn.disabled = true;
 
-    // Here you would normally submit to the server
-    // For now, just show success
+    // ✅ FAZER SUBMIT REAL DO FORMULÁRIO
     setTimeout(() => {
-        alert('Quiz criado com sucesso!');
-        window.location.href = '/dashboard';
-    }, 2000);
+        this.submit(); // FAZ O POST REAL PARA O SERVIDOR!
+    }, 500);
 });
 </script>
 {% endblock %}
