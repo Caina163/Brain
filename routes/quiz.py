@@ -18,7 +18,7 @@ from werkzeug.utils import secure_filename
 from models.user import User, QuizResult
 from models.quiz import Quiz
 from models.question import Question
-from models.answer import Answer
+# from models.answer import Answer  # Modelo Answer não existe - respostas estão no Question
 from utils.decorators import admin_or_moderator_required, admin_required, quiz_owner_or_admin_required
 from utils.helpers import (
     save_uploaded_file, delete_file, validate_quiz_data,
@@ -132,22 +132,30 @@ def create():
             
             print(f"DEBUG: Questão {i+1} ID: {new_question.id}")
             
-            # Processar respostas
-            for j, answer_data in enumerate(answers):
-                answer_text = answer_data.get('text', '').strip()
-                is_correct = answer_data.get('isCorrect', False)
+            # Processar respostas (usando estrutura do modelo Question existente)
+            if len(answers) >= 1:
+                # Encontrar a resposta correta e as erradas
+                correct_answer = None
+                wrong_answers = []
                 
-                if not answer_text:
-                    continue
+                for answer_data in answers:
+                    answer_text = answer_data.get('text', '').strip()
+                    is_correct = answer_data.get('isCorrect', False)
+                    
+                    if not answer_text:
+                        continue
+                    
+                    if is_correct:
+                        correct_answer = answer_text
+                    else:
+                        wrong_answers.append(answer_text)
                 
-                new_answer = Answer(
-                    question_id=new_question.id,
-                    answer_text=answer_text,
-                    is_correct=is_correct,
-                    order_number=j + 1
-                )
-                
-                db.session.add(new_answer)
+                # Definir respostas no modelo Question (estrutura existente)
+                if correct_answer:
+                    new_question.correct_answer = correct_answer
+                    new_question.option_a = wrong_answers[0] if len(wrong_answers) > 0 else None
+                    new_question.option_b = wrong_answers[1] if len(wrong_answers) > 1 else None
+                    new_question.option_c = wrong_answers[2] if len(wrong_answers) > 2 else None
             
             print(f"DEBUG: Questão {i+1} processada com {len(answers)} respostas")
         
