@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 from models.user import User, QuizResult
 from models.quiz import Quiz
 from models.question import Question
+from models.answer import Answer
 from utils.decorators import admin_or_moderator_required, admin_required, quiz_owner_or_admin_required
 from utils.helpers import (
     save_uploaded_file, delete_file, validate_quiz_data,
@@ -26,109 +27,147 @@ from utils.helpers import (
 from datetime import datetime
 
 # Criar blueprint para rotas de quiz
-quiz = Blueprint('quiz', __name__)
+quiz_bp = Blueprint('quiz', __name__)
 
 
-@quiz.route('/create', methods=['GET', 'POST'])
+@quiz_bp.route('/create', methods=['GET', 'POST'])
 @login_required
-@admin_or_moderator_required
 def create():
     """Criar novo quiz"""
-
-    if request.method == 'POST':
+    if request.method == 'GET':
+        return render_template('quiz/create.html')
+    
+    try:
         db = current_app.extensions['sqlalchemy']
+        print("=== DEBUG: Iniciando criação de quiz ===")
         
-        # Obter dados do formulário
-        title = request.form.get('title', '').strip()
-        description = request.form.get('description', '').strip()
-        questions_data = request.form.get('questions_data', '')
-
-        # Validar dados básicos do quiz
+        # Pegar dados do formulário
+        title = request.form.get('title')
+        description = request.form.get('description')
+        questions_json = request.form.get('questions_data')
+        
+        print(f"DEBUG: title={title}")
+        print(f"DEBUG: description={description}")
+        print(f"DEBUG: questions_json presente: {bool(questions_json)}")
+        
+        # Validar dados básicos
+        if not title or not description:
+            print("DEBUG: Erro - título ou descrição vazios")
+            flash('Título e descrição são obrigatórios.', 'error')
+            return render_template('quiz/create.html')
+        
+        if not questions_json:
+            print("DEBUG: Erro - nenhuma pergunta fornecida")
+            flash('Adicione pelo menos uma pergunta ao quiz.', 'error')
+            return render_template('quiz/create.html')
+        
+        # Parse das questões
+        try:
+            questions_data = json.loads(questions_json)
+            print(f"DEBUG: questions_data parsed: {len(questions_data)} questões")
+        except json.JSONDecodeError as e:
+            print(f"DEBUG: Erro JSON decode: {e}")
+            flash('Erro no formato das questões.', 'error')
+            return render_template('quiz/create.html')
+        
+        # Preparar dados do quiz para validação
         quiz_data = {
             'title': title,
-            'description': description
+            'description': description,
+            'questions': questions_data
         }
-
+        
+        print("DEBUG: Iniciando validação...")
+        
+        # Validar dados
         is_valid, errors = validate_quiz_data(quiz_data)
-
+        print(f"DEBUG: Validação result: is_valid={is_valid}, errors={errors}")
+        
         if not is_valid:
+            print("DEBUG: Falhou na validação")
             for error in errors:
                 flash(error, 'error')
             return render_template('quiz/create.html')
-
-        # Processar dados das questões
-        try:
-            questions = json.loads(questions_data) if questions_data else []
-        except json.JSONDecodeError:
-            flash('Erro ao processar dados das questões.', 'error')
-            return render_template('quiz/create.html')
-
-        if not questions:
-            flash('Adicione pelo menos uma questão ao quiz.', 'error')
-            return render_template('quiz/create.html')
-
-        # Processar upload de imagem do quiz
-        image_filename = None
-        if 'quiz_image' in request.files:
-            file = request.files['quiz_image']
-            if file and file.filename:
-                image_filename = save_uploaded_file(file)
-                if not image_filename:
-                    flash('Erro ao fazer upload da imagem. Quiz criado sem imagem.', 'warning')
-
-        # Criar quiz
-        try:
-            new_quiz = Quiz(
-                title=title,
-                description=description,
-                created_by=current_user.id,
-                image_filename=image_filename,
-                status='active'  # ✅ DEFINIR STATUS EXPLICITAMENTE
+        
+        print("DEBUG: Criando objeto Quiz...")
+        
+        # ✅ CORREÇÃO: Usar campos que existem no banco (is_active, is_deleted, is_archived)
+        new_quiz = Quiz(
+            title=title,
+            description=description,
+            created_by=current_user.id,
+            is_active=True,      # ✅ Campo que existe
+            is_deleted=False,    # ✅ Campo que existe  
+            is_archived=False    # ✅ Campo que existe
+        )
+        
+        print("DEBUG: Adicionando quiz à sessão...")
+        db.session.add(new_quiz)
+        db.session.flush()  # Para obter o ID
+        
+        print(f"DEBUG: Quiz ID: {new_quiz.id}")
+        
+        # Processar cada questão
+        for i, question_data in enumerate(questions_data):
+            print(f"DEBUG: Processando questão {i+1}")
+            
+            question_text = question_data.get('question', '').strip()
+            question_type = question_data.get('type', 'multiple_choice')
+            answers = question_data.get('answers', [])
+            
+            if not question_text:
+                print(f"DEBUG: Questão {i+1} sem texto")
+                continue
+            
+            # Criar questão
+            new_question = Question(
+                quiz_id=new_quiz.id,
+                question_text=question_text,
+                question_type=question_type,
+                order_number=i + 1
             )
-
-            db.session.add(new_quiz)
-            db.session.flush()  # Para obter o ID do quiz
-
-            # Adicionar questões
-            for index, question_data in enumerate(questions):
-                # Processar imagem da questão
-                question_image = None
-                image_field_name = f'question_{index + 1}_image'
-                if image_field_name in request.files:
-                    file = request.files[image_field_name]
-                    if file and file.filename:
-                        question_image = save_uploaded_file(file)
-
-                # Criar questão
-                question = Question(
-                    quiz_id=new_quiz.id,
-                    question_text=question_data['text'],
-                    correct_answer=question_data['correctAnswer'],
-                    option_a=question_data['wrongAnswers'][0] if len(question_data['wrongAnswers']) > 0 else None,
-                    option_b=question_data['wrongAnswers'][1] if len(question_data['wrongAnswers']) > 1 else None,
-                    option_c=question_data['wrongAnswers'][2] if len(question_data['wrongAnswers']) > 2 else None,
-                    image_filename=question_image,
-                    order_index=index
+            
+            db.session.add(new_question)
+            db.session.flush()  # Para obter o ID da questão
+            
+            print(f"DEBUG: Questão {i+1} ID: {new_question.id}")
+            
+            # Processar respostas
+            for j, answer_data in enumerate(answers):
+                answer_text = answer_data.get('text', '').strip()
+                is_correct = answer_data.get('isCorrect', False)
+                
+                if not answer_text:
+                    continue
+                
+                new_answer = Answer(
+                    question_id=new_question.id,
+                    answer_text=answer_text,
+                    is_correct=is_correct,
+                    order_number=j + 1
                 )
+                
+                db.session.add(new_answer)
+            
+            print(f"DEBUG: Questão {i+1} processada com {len(answers)} respostas")
+        
+        # ✅ COMMIT FINAL
+        db.session.commit()
+        print("DEBUG: Quiz salvo com sucesso!")
+        
+        flash('Quiz criado com sucesso!', 'success')
+        return redirect(url_for('dashboard.index'))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"DEBUG: Erro completo: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Erro ao criar quiz: {str(e)}', 'error')
+        return render_template('quiz/create.html')
 
-                db.session.add(question)
 
-            db.session.commit()
-
-            flash('Quiz criado com sucesso!', 'success')
-            return redirect(url_for('quiz.view', quiz_id=new_quiz.id))
-
-        except Exception as e:
-            db.session.rollback()
-            if image_filename:
-                delete_file(image_filename)
-            flash('Erro ao criar quiz. Tente novamente.', 'error')
-            print(f"Erro ao criar quiz: {e}")
-
-    return render_template('quiz/create.html')
-
-
-@quiz.route('/delete_temp_question', methods=['POST'])
+@quiz_bp.route('/delete_temp_question', methods=['POST'])
 @login_required
 @admin_or_moderator_required
 def delete_temp_question():
@@ -153,7 +192,7 @@ def delete_temp_question():
         }), 500
 
 
-@quiz.route('/edit/<int:quiz_id>', methods=['GET', 'POST'])
+@quiz_bp.route('/edit/<int:quiz_id>', methods=['GET', 'POST'])
 @login_required
 @quiz_owner_or_admin_required
 def edit(quiz_id):
@@ -286,7 +325,7 @@ def edit(quiz_id):
     return render_template('quiz/edit.html', quiz=quiz_obj)
 
 
-@quiz.route('/delete_question/<int:question_id>', methods=['POST'])
+@quiz_bp.route('/delete_question/<int:question_id>', methods=['POST'])
 @login_required
 @admin_or_moderator_required
 def delete_question(question_id):
@@ -319,7 +358,7 @@ def delete_question(question_id):
     return redirect(url_for('quiz.edit', quiz_id=quiz_obj.id))
 
 
-@quiz.route('/play/<int:quiz_id>')
+@quiz_bp.route('/play/<int:quiz_id>')
 @login_required
 def play(quiz_id):
     """Iniciar jogo do quiz"""
@@ -354,7 +393,7 @@ def play(quiz_id):
                            total_questions=len(questions))
 
 
-@quiz.route('/submit_answer/<int:quiz_id>', methods=['POST'])
+@quiz_bp.route('/submit_answer/<int:quiz_id>', methods=['POST'])
 @login_required
 def submit_answer(quiz_id):
     """Submeter resposta de uma questão"""
@@ -405,7 +444,7 @@ def submit_answer(quiz_id):
     })
 
 
-@quiz.route('/finish/<int:quiz_id>', methods=['POST'])
+@quiz_bp.route('/finish/<int:quiz_id>', methods=['POST'])
 @login_required
 def finish(quiz_id):
     """Finalizar quiz e salvar resultado"""
@@ -451,7 +490,7 @@ def finish(quiz_id):
         return redirect(url_for('dashboard.index'))
 
 
-@quiz.route('/result/<int:result_id>')
+@quiz_bp.route('/result/<int:result_id>')
 @login_required
 def result(result_id):
     """Mostrar resultado do quiz"""
@@ -466,64 +505,46 @@ def result(result_id):
     return render_template('quiz/results.html', result=result)
 
 
-@quiz.route('/manage')
+@quiz_bp.route('/manage')
 @login_required
-@admin_or_moderator_required
 def manage():
     """Gerenciar quizzes"""
-
-    # Filtros
-    status_filter = request.args.get('status', 'all')
-    created_by_filter = request.args.get('created_by', 'all')
-
-    # Query base
-    query = Quiz.query
-
-    # ✅ APLICAR FILTROS CORRIGIDOS - USANDO NOVO CAMPO 'STATUS'
+    page = request.args.get('page', 1, type=int)
+    status_filter = request.args.get('status', 'active')
+    search = request.args.get('search', '')
+    
+    # Query base - quizzes do usuário atual
+    query = Quiz.query.filter_by(created_by=current_user.id)
+    
+    # ✅ CORREÇÃO: Usar campos que existem no banco (is_active, is_deleted, is_archived)
     if status_filter == 'active':
-        query = query.filter_by(status='active')
+        query = query.filter_by(is_active=True, is_deleted=False, is_archived=False)
     elif status_filter == 'archived':
-        query = query.filter_by(status='archived')
+        query = query.filter_by(is_archived=True, is_deleted=False)
     elif status_filter == 'deleted':
-        query = query.filter_by(status='deleted')
-    else:
-        # Para 'all', não filtramos por status excluído por padrão
-        query = query.filter(Quiz.status != 'deleted')
-
-    # Filtro por criador (apenas para admin)
-    if current_user.is_admin and created_by_filter != 'all':
-        if created_by_filter == 'me':
-            query = query.filter_by(created_by=current_user.id)
-        else:
-            try:
-                creator_id = int(created_by_filter)
-                query = query.filter_by(created_by=creator_id)
-            except ValueError:
-                pass
-    elif not current_user.is_admin:
-        # Moderadores só veem próprios quizzes (e não excluídos)
-        query = query.filter_by(created_by=current_user.id).filter(Quiz.status != 'deleted')
-
-    # Ordenar por data de criação
-    quizzes = query.order_by(Quiz.created_at.desc()).all()
-
-    # Lista de criadores (apenas para admin)
-    creators = []
-    if current_user.is_admin:
-        creators = (User.query
-                    .join(Quiz, User.id == Quiz.created_by)
-                    .distinct()
-                    .order_by(User.first_name)
-                    .all())
-
-    return render_template('quiz/manage.html',
-                           quizzes=quizzes,
-                           creators=creators,
-                           current_status=status_filter,
-                           current_creator=created_by_filter)
+        query = query.filter_by(is_deleted=True)
+    
+    # Aplicar busca por título
+    if search:
+        query = query.filter(Quiz.title.ilike(f'%{search}%'))
+    
+    # Ordenar por data de criação (mais recente primeiro)
+    query = query.order_by(Quiz.created_at.desc())
+    
+    # Paginação
+    quizzes = query.paginate(
+        page=page,
+        per_page=10,
+        error_out=False
+    )
+    
+    return render_template('quiz/manage.html', 
+                         quizzes=quizzes,
+                         current_status=status_filter,
+                         search_term=search)
 
 
-@quiz.route('/archive/<int:quiz_id>', methods=['POST'])
+@quiz_bp.route('/archive/<int:quiz_id>', methods=['POST'])
 @login_required
 @admin_or_moderator_required
 def archive(quiz_id):
@@ -537,9 +558,10 @@ def archive(quiz_id):
         return redirect(url_for('quiz.manage'))
 
     try:
-        # ✅ USANDO MÉTODO CORRIGIDO DO MODEL
-        quiz_obj.archive()
         db = current_app.extensions['sqlalchemy']
+        # ✅ Usar campos que existem no banco
+        quiz_obj.is_archived = True
+        quiz_obj.is_active = False
         db.session.commit()
         flash('Quiz arquivado com sucesso!', 'success')
     except Exception as e:
@@ -551,7 +573,7 @@ def archive(quiz_id):
     return redirect(url_for('quiz.manage'))
 
 
-@quiz.route('/delete/<int:quiz_id>', methods=['POST'])
+@quiz_bp.route('/delete/<int:quiz_id>', methods=['POST'])
 @login_required
 def delete(quiz_id):
     """Excluir quiz (apenas admin)"""
@@ -564,9 +586,10 @@ def delete(quiz_id):
         return redirect(url_for('quiz.manage'))
 
     try:
-        # ✅ USANDO MÉTODO CORRIGIDO DO MODEL
-        quiz_obj.delete()
         db = current_app.extensions['sqlalchemy']
+        # ✅ Usar campos que existem no banco
+        quiz_obj.is_deleted = True
+        quiz_obj.is_active = False
         db.session.commit()
         flash('Quiz excluído com sucesso!', 'success')
     except Exception as e:
@@ -578,7 +601,7 @@ def delete(quiz_id):
     return redirect(url_for('quiz.manage'))
 
 
-@quiz.route('/restore/<int:quiz_id>', methods=['POST'])
+@quiz_bp.route('/restore/<int:quiz_id>', methods=['POST'])
 @login_required
 def restore(quiz_id):
     """Restaurar quiz arquivado/excluído (apenas admin)"""
@@ -591,9 +614,11 @@ def restore(quiz_id):
         return redirect(url_for('quiz.manage'))
 
     try:
-        # ✅ USANDO MÉTODO CORRIGIDO DO MODEL
-        quiz_obj.restore()
         db = current_app.extensions['sqlalchemy']
+        # ✅ Usar campos que existem no banco
+        quiz_obj.is_active = True
+        quiz_obj.is_deleted = False
+        quiz_obj.is_archived = False
         db.session.commit()
         flash('Quiz restaurado com sucesso!', 'success')
     except Exception as e:
@@ -605,7 +630,7 @@ def restore(quiz_id):
     return redirect(url_for('quiz.manage'))
 
 
-@quiz.route('/view/<int:quiz_id>')
+@quiz_bp.route('/view/<int:quiz_id>')
 @login_required
 def view(quiz_id):
     """Visualizar detalhes do quiz"""
