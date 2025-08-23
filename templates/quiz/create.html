@@ -14,297 +14,160 @@
         </h1>
     </div>
 
-    <!-- Progress Bar Melhorado -->
-    <div class="progress mb-4" style="height: 8px;">
-        <div class="progress-bar bg-primary progress-bar-striped" 
-             role="progressbar" 
-             id="progressBar" 
-             style="width: 33%"></div>
-    </div>
-
-    <!-- Stepper Visual -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="stepper d-flex justify-content-between align-items-center">
-                <div class="step active" id="step-1">
-                    <div class="step-circle">1</div>
-                    <div class="step-label">Informações Básicas</div>
-                </div>
-                <div class="step-line"></div>
-                <div class="step" id="step-2">
-                    <div class="step-circle">2</div>
-                    <div class="step-label">Criar Questões</div>
-                </div>
-                <div class="step-line"></div>
-                <div class="step" id="step-3">
-                    <div class="step-circle">3</div>
-                    <div class="step-label">Finalizar</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Debug Panel (removível em produção) -->
-    <div class="alert alert-info mb-4" id="debugPanel" style="display: none;">
-        <h6><i class="bi bi-bug"></i> Debug Info:</h6>
-        <div id="debugContent"></div>
-    </div>
-
-    <!-- Formulário Principal -->
-    <form id="quizForm" method="POST" enctype="multipart/form-data">
+    <!-- Formulário de Criação do Quiz -->
+    <form id="quizForm" method="POST" enctype="multipart/form-data" novalidate>
         {{ csrf_token() if csrf_token }}
         
-        <!-- FASE 1: Informações Básicas -->
-        <div class="step-content" id="stepContent1">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações do Quiz</h5>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label for="title" class="form-label fw-bold">
-                                    <i class="bi bi-pencil"></i> Título do Quiz *
-                                </label>
-                                <input type="text" 
-                                       class="form-control form-control-lg" 
-                                       id="title" 
-                                       name="title" 
-                                       required
-                                       placeholder="Ex: História do Brasil - Período Colonial">
-                                <div class="form-text">Escolha um título claro e descritivo</div>
-                            </div>
+        <!-- Informações Básicas do Quiz -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações do Quiz</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label for="title" class="form-label fw-bold">
+                                <i class="bi bi-pencil"></i> Título do Quiz *
+                            </label>
+                            <input type="text" 
+                                   class="form-control form-control-lg" 
+                                   id="title" 
+                                   name="title" 
+                                   required
+                                   placeholder="Ex: História do Brasil - Período Colonial">
+                        </div>
 
-                            <div class="mb-3">
-                                <label for="description" class="form-label fw-bold">
-                                    <i class="bi bi-text-paragraph"></i> Descrição
-                                </label>
-                                <textarea class="form-control" 
-                                          id="description" 
-                                          name="description" 
-                                          rows="3"
-                                          placeholder="Descreva o conteúdo e objetivos do quiz..."></textarea>
-                            </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label fw-bold">
+                                <i class="bi bi-text-paragraph"></i> Descrição
+                            </label>
+                            <textarea class="form-control" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="3"
+                                      placeholder="Descreva o conteúdo e objetivos do quiz..."></textarea>
+                        </div>
 
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="category" class="form-label fw-bold">
-                                            <i class="bi bi-tag"></i> Categoria *
-                                        </label>
-                                        <select class="form-select" id="category" name="category" required>
-                                            <option value="">Escolha uma categoria</option>
-                                            <option value="matematica">Matemática</option>
-                                            <option value="portugues">Português</option>
-                                            <option value="historia">História</option>
-                                            <option value="geografia">Geografia</option>
-                                            <option value="ciencias">Ciências</option>
-                                            <option value="ingles">Inglês</option>
-                                            <option value="fisica">Física</option>
-                                            <option value="quimica">Química</option>
-                                            <option value="biologia">Biologia</option>
-                                            <option value="filosofia">Filosofia</option>
-                                            <option value="sociologia">Sociologia</option>
-                                            <option value="arte">Arte</option>
-                                            <option value="outros">Outros</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="difficulty" class="form-label fw-bold">
-                                            <i class="bi bi-speedometer2"></i> Dificuldade *
-                                        </label>
-                                        <select class="form-select" id="difficulty" name="difficulty" required>
-                                            <option value="">Selecione a dificuldade</option>
-                                            <option value="facil">🟢 Fácil</option>
-                                            <option value="medio">🟡 Médio</option>
-                                            <option value="dificil">🔴 Difícil</option>
-                                        </select>
-                                    </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="category" class="form-label fw-bold">
+                                        <i class="bi bi-tag"></i> Categoria *
+                                    </label>
+                                    <select class="form-select" id="category" name="category" required>
+                                        <option value="">Escolha uma categoria</option>
+                                        <option value="matematica">Matemática</option>
+                                        <option value="portugues">Português</option>
+                                        <option value="historia">História</option>
+                                        <option value="geografia">Geografia</option>
+                                        <option value="ciencias">Ciências</option>
+                                        <option value="ingles">Inglês</option>
+                                        <option value="fisica">Física</option>
+                                        <option value="quimica">Química</option>
+                                        <option value="biologia">Biologia</option>
+                                        <option value="filosofia">Filosofia</option>
+                                        <option value="sociologia">Sociologia</option>
+                                        <option value="arte">Arte</option>
+                                        <option value="outros">Outros</option>
+                                    </select>
                                 </div>
                             </div>
-
-                            <div class="mb-3">
-                                <label for="time_limit" class="form-label fw-bold">
-                                    <i class="bi bi-clock"></i> Tempo Limite (em minutos)
-                                </label>
-                                <input type="number" 
-                                       class="form-control" 
-                                       id="time_limit" 
-                                       name="time_limit" 
-                                       min="1" 
-                                       max="180"
-                                       placeholder="30">
-                                <div class="form-text">Deixe em branco para sem limite de tempo</div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="difficulty" class="form-label fw-bold">
+                                        <i class="bi bi-speedometer2"></i> Dificuldade *
+                                    </label>
+                                    <select class="form-select" id="difficulty" name="difficulty" required>
+                                        <option value="">Selecione a dificuldade</option>
+                                        <option value="facil">🟢 Fácil</option>
+                                        <option value="medio">🟡 Médio</option>
+                                        <option value="dificil">🔴 Difícil</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="image" class="form-label fw-bold">
-                                    <i class="bi bi-image"></i> Imagem do Quiz
-                                </label>
-                                <div class="image-upload-area border-2 border-dashed border-secondary rounded-3 p-4 text-center">
-                                    <input type="file" 
-                                           class="form-control d-none" 
-                                           id="image" 
-                                           name="image" 
-                                           accept="image/*">
-                                    <div id="imagePreview">
-                                        <i class="bi bi-cloud-upload display-4 text-secondary mb-2"></i>
-                                        <p class="mb-2">Clique ou arraste uma imagem</p>
-                                        <small class="text-muted">PNG, JPG até 16MB</small>
-                                    </div>
+
+                        <div class="mb-3">
+                            <label for="time_limit" class="form-label fw-bold">
+                                <i class="bi bi-clock"></i> Tempo Limite (minutos)
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="time_limit" 
+                                   name="time_limit" 
+                                   min="1" 
+                                   max="180"
+                                   placeholder="30">
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="image" class="form-label fw-bold">
+                                <i class="bi bi-image"></i> Imagem do Quiz
+                            </label>
+                            <div class="image-upload-area border-2 border-dashed border-secondary rounded-3 p-4 text-center" style="cursor: pointer;">
+                                <input type="file" 
+                                       class="form-control d-none" 
+                                       id="image" 
+                                       name="image" 
+                                       accept="image/*">
+                                <div id="imagePreview">
+                                    <i class="bi bi-cloud-upload display-4 text-secondary mb-2"></i>
+                                    <p class="mb-2">Clique para enviar imagem</p>
+                                    <small class="text-muted">PNG, JPG até 16MB</small>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="text-end mt-4">
-                <button type="button" class="btn btn-primary btn-lg" id="nextToQuestions">
-                    Próximo: Criar Questões <i class="bi bi-arrow-right"></i>
-                </button>
             </div>
         </div>
 
-        <!-- FASE 2: Criar Questões -->
-        <div class="step-content d-none" id="stepContent2">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-question-circle"></i> Questões do Quiz</h5>
-                    <span class="badge bg-light text-success" id="questionsCounter">0 questões</span>
+        <!-- Questões do Quiz -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-question-circle"></i> Questões do Quiz</h5>
+                <button type="button" class="btn btn-outline-light btn-sm" id="addQuestionBtn">
+                    <i class="bi bi-plus-circle"></i> Adicionar Questão
+                </button>
+            </div>
+            <div class="card-body p-4">
+                <!-- Container onde as questões serão adicionadas -->
+                <div id="questionsContainer">
+                    <!-- Questões aparecerão aqui -->
                 </div>
-                <div class="card-body p-4">
-                    <!-- Container das Questões -->
-                    <div id="questionsContainer">
-                        <!-- Questões serão adicionadas dinamicamente aqui -->
-                    </div>
-                    
-                    <!-- Botão Adicionar Questão -->
-                    <div class="text-center mt-4">
-                        <button type="button" class="btn btn-outline-success btn-lg" id="addQuestionBtn">
-                            <i class="bi bi-plus-circle"></i> Adicionar Questão
+                
+                <div class="text-center" id="noQuestionsMessage">
+                    <div class="py-4">
+                        <i class="bi bi-question-circle display-4 text-muted mb-3"></i>
+                        <p class="text-muted">Nenhuma questão adicionada ainda.</p>
+                        <button type="button" class="btn btn-success" onclick="addQuestion()">
+                            <i class="bi bi-plus-circle"></i> Criar Primeira Questão
                         </button>
                     </div>
                 </div>
             </div>
-
-            <div class="d-flex justify-content-between mt-4">
-                <button type="button" class="btn btn-outline-secondary btn-lg" id="backToBasics">
-                    <i class="bi bi-arrow-left"></i> Voltar
-                </button>
-                <button type="button" class="btn btn-primary btn-lg" id="nextToFinish" disabled>
-                    Próximo: Finalizar <i class="bi bi-arrow-right"></i>
-                </button>
-            </div>
         </div>
 
-        <!-- FASE 3: Finalizar -->
-        <div class="step-content d-none" id="stepContent3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="bi bi-check-circle"></i> Revisar e Finalizar</h5>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h6 class="text-primary mb-3">📋 Resumo do Quiz</h6>
-                            <div id="quizSummary">
-                                <!-- Resumo será preenchido via JavaScript -->
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="alert alert-info">
-                                <h6><i class="bi bi-info-circle"></i> Antes de finalizar:</h6>
-                                <ul class="mb-0 small">
-                                    <li>Revise todas as questões</li>
-                                    <li>Verifique as respostas corretas</li>
-                                    <li>Confirme as informações básicas</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-between mt-4">
-                <button type="button" class="btn btn-outline-secondary btn-lg" id="backToQuestions">
-                    <i class="bi bi-arrow-left"></i> Voltar
-                </button>
-                <button type="submit" class="btn btn-success btn-lg" id="finishQuiz">
-                    <i class="bi bi-check-circle"></i> Criar Quiz
-                </button>
-            </div>
+        <!-- Botão Criar Quiz -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary btn-lg px-5" id="createQuizBtn">
+                <i class="bi bi-check-circle"></i> Criar Quiz
+            </button>
         </div>
     </form>
 </div>
 
+<!-- Debug Panel (oculto por padrão) -->
+<div class="alert alert-info mt-3" id="debugPanel" style="display: none;">
+    <h6><i class="bi bi-bug"></i> Debug Info:</h6>
+    <div id="debugContent"></div>
+</div>
+
 <style>
-/* Estilos do Stepper */
-.stepper {
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.step {
-    text-align: center;
-    flex: 1;
-    position: relative;
-}
-
-.step-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: #e9ecef;
-    color: #6c757d;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    margin: 0 auto 8px;
-    transition: all 0.3s ease;
-}
-
-.step.active .step-circle {
-    background-color: #0d6efd;
-    color: white;
-}
-
-.step.completed .step-circle {
-    background-color: #198754;
-    color: white;
-}
-
-.step-label {
-    font-size: 0.875rem;
-    color: #6c757d;
-    font-weight: 500;
-}
-
-.step.active .step-label {
-    color: #0d6efd;
-    font-weight: 600;
-}
-
-.step-line {
-    height: 2px;
-    background-color: #e9ecef;
-    margin: 20px 20px 0 20px;
-    flex: 1;
-}
-
-.step.completed + .step-line {
-    background-color: #198754;
-}
-
-/* Upload de Imagem */
 .image-upload-area {
-    cursor: pointer;
     transition: all 0.3s ease;
 }
 
@@ -313,47 +176,33 @@
     background-color: rgba(13, 110, 253, 0.05);
 }
 
-/* Questões */
 .question-card {
     border-left: 4px solid #0d6efd;
     margin-bottom: 1.5rem;
 }
 
-.question-header {
-    background-color: rgba(13, 110, 253, 0.05);
-    border-bottom: 1px solid rgba(13, 110, 253, 0.1);
-}
-
 .answer-option {
-    border: 2px solid #e9ecef;
+    margin-bottom: 10px;
+}
+
+.answer-option .form-control {
     border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
 }
 
-.answer-option:hover {
-    border-color: #0d6efd;
-    background-color: rgba(13, 110, 253, 0.05);
+.correct-answer-indicator {
+    color: #198754;
+    font-weight: bold;
 }
 
-.answer-option.correct {
-    border-color: #198754;
-    background-color: rgba(25, 135, 84, 0.05);
-}
-
-/* Animações */
 .fade-in {
-    animation: fadeIn 0.5s ease-in;
+    animation: fadeIn 0.5s ease-in-out;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Loading States */
 .btn-loading {
     position: relative;
     color: transparent !important;
@@ -380,567 +229,468 @@
 </style>
 
 <script>
-class QuizCreator {
-    constructor() {
-        this.currentStep = 1;
-        this.questions = [];
-        this.questionCounter = 0;
-        this.isSubmitting = false;
-        
-        // Log inicial para debug
-        console.log('🚀 QuizCreator initialized');
-        
-        this.initializeEventListeners();
-        this.updateUI();
-    }
+// Debug ativo para encontrar problemas
+let debugMode = true;
+let questionCount = 0;
+let isSubmitting = false;
 
-    initializeEventListeners() {
-        console.log('📝 Setting up event listeners...');
-        
-        // Navegação entre etapas
-        document.getElementById('nextToQuestions')?.addEventListener('click', () => this.goToStep(2));
-        document.getElementById('backToBasics')?.addEventListener('click', () => this.goToStep(1));
-        document.getElementById('nextToFinish')?.addEventListener('click', () => this.goToStep(3));
-        document.getElementById('backToQuestions')?.addEventListener('click', () => this.goToStep(2));
-        
-        // Adicionar questão
-        document.getElementById('addQuestionBtn')?.addEventListener('click', () => this.addQuestion());
-        
-        // Upload de imagem
-        const imageInput = document.getElementById('image');
-        const imageUploadArea = document.querySelector('.image-upload-area');
-        
-        if (imageInput && imageUploadArea) {
-            imageUploadArea.addEventListener('click', () => imageInput.click());
-            imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
-        }
-        
-        // Envio do formulário
-        document.getElementById('finishQuiz')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.submitQuiz();
-        });
-        
-        // Event delegation para botões dinâmicos
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('.delete-question-btn')) {
-                e.preventDefault();
-                e.stopPropagation();
-                const questionNum = parseInt(e.target.dataset.question);
-                this.deleteQuestion(questionNum);
-            }
-            
-            if (e.target.matches('.correct-answer-radio')) {
-                const questionNum = parseInt(e.target.dataset.question);
-                this.setCorrectAnswer(questionNum, e.target.value);
-            }
-        });
-        
-        console.log('✅ Event listeners configured');
-    }
-
-    goToStep(stepNumber) {
-        console.log(`🔄 Going to step ${stepNumber}`);
-        
-        // Validar etapa atual antes de prosseguir
-        if (stepNumber > this.currentStep && !this.validateCurrentStep()) {
-            console.log('❌ Step validation failed');
-            return;
-        }
-        
-        // Esconder etapa atual
-        const currentStepContent = document.getElementById(`stepContent${this.currentStep}`);
-        if (currentStepContent) {
-            currentStepContent.classList.add('d-none');
-        }
-        
-        // Mostrar nova etapa
-        const newStepContent = document.getElementById(`stepContent${stepNumber}`);
-        if (newStepContent) {
-            newStepContent.classList.remove('d-none');
-            newStepContent.classList.add('fade-in');
-        }
-        
-        this.currentStep = stepNumber;
-        this.updateStepper();
-        this.updateProgressBar();
-        
-        // Ações específicas por etapa
-        if (stepNumber === 3) {
-            this.generateSummary();
-        }
-        
-        console.log(`✅ Now on step ${stepNumber}`);
-    }
-
-    validateCurrentStep() {
-        console.log(`🔍 Validating step ${this.currentStep}`);
-        
-        switch(this.currentStep) {
-            case 1:
-                const title = document.getElementById('title').value.trim();
-                const category = document.getElementById('category').value;
-                const difficulty = document.getElementById('difficulty').value;
-                
-                if (!title || !category || !difficulty) {
-                    this.showAlert('Por favor, preencha todos os campos obrigatórios.', 'warning');
-                    return false;
-                }
-                break;
-                
-            case 2:
-                if (this.questions.length === 0) {
-                    this.showAlert('Adicione pelo menos uma questão ao quiz.', 'warning');
-                    return false;
-                }
-                
-                // Validar se todas as questões têm resposta correta
-                for (let question of this.questions) {
-                    if (!question.correctAnswer) {
-                        this.showAlert('Todas as questões devem ter uma resposta correta marcada.', 'warning');
-                        return false;
-                    }
-                    if (!question.text.trim()) {
-                        this.showAlert('Todas as questões devem ter texto.', 'warning');
-                        return false;
-                    }
-                    if (question.answers.some(answer => !answer.trim())) {
-                        this.showAlert('Todas as alternativas devem ser preenchidas.', 'warning');
-                        return false;
-                    }
-                }
-                break;
-        }
-        
-        console.log('✅ Step validation passed');
-        return true;
-    }
-
-    addQuestion() {
-        this.questionCounter++;
-        const questionNum = this.questionCounter;
-        
-        console.log(`➕ Adding question #${questionNum}`);
-        
-        const questionData = {
-            id: questionNum,
-            text: '',
-            answers: ['', '', '', ''],
-            correctAnswer: null,
-            image: null
-        };
-        
-        this.questions.push(questionData);
-        
-        const questionHTML = this.createQuestionHTML(questionNum);
-        document.getElementById('questionsContainer').insertAdjacentHTML('beforeend', questionHTML);
-        
-        this.updateQuestionsCounter();
-        this.updateNextButton();
-        
-        // Focar no campo de texto da nova questão
-        setTimeout(() => {
-            document.getElementById(`question_${questionNum}_text`)?.focus();
-        }, 100);
-        
-        console.log(`✅ Question #${questionNum} added`);
-    }
-
-    createQuestionHTML(questionNum) {
-        return `
-            <div class="question-card card mb-3" data-question="${questionNum}">
-                <div class="question-header card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">
-                        <i class="bi bi-question-circle"></i> Questão ${questionNum}
-                    </h6>
-                    <button type="button" class="btn btn-outline-danger btn-sm delete-question-btn" data-question="${questionNum}">
-                        <i class="bi bi-trash"></i> Remover
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Pergunta *</label>
-                        <textarea class="form-control" 
-                                  id="question_${questionNum}_text" 
-                                  name="questions[${questionNum}][text]" 
-                                  rows="2" 
-                                  placeholder="Digite a pergunta aqui..."
-                                  required></textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Alternativas *</label>
-                        <div class="row">
-                            ${['A', 'B', 'C', 'D'].map((letter, index) => `
-                                <div class="col-md-6 mb-2">
-                                    <div class="input-group">
-                                        <div class="input-group-text">
-                                            <input type="radio" 
-                                                   name="questions[${questionNum}][correct]" 
-                                                   value="${index}" 
-                                                   class="correct-answer-radio"
-                                                   data-question="${questionNum}"
-                                                   title="Marcar como resposta correta">
-                                        </div>
-                                        <span class="input-group-text fw-bold">${letter}</span>
-                                        <input type="text" 
-                                               class="form-control" 
-                                               name="questions[${questionNum}][answers][${index}]" 
-                                               placeholder="Alternativa ${letter}"
-                                               required>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> 
-                            Clique no círculo ao lado da alternativa para marcá-la como correta
-                        </small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Imagem da Questão (opcional)</label>
-                        <input type="file" 
-                               class="form-control" 
-                               name="questions[${questionNum}][image]" 
-                               accept="image/*">
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    deleteQuestion(questionNum) {
-        console.log(`🗑️ Deleting question #${questionNum}`);
-        
-        if (confirm('Tem certeza que deseja remover esta questão?')) {
-            // Remover do array
-            this.questions = this.questions.filter(q => q.id !== questionNum);
-            
-            // Remover do DOM
-            const questionElement = document.querySelector(`[data-question="${questionNum}"]`);
-            if (questionElement) {
-                questionElement.remove();
-            }
-            
-            this.updateQuestionsCounter();
-            this.updateNextButton();
-            
-            console.log(`✅ Question #${questionNum} deleted`);
-        }
-    }
-
-    setCorrectAnswer(questionNum, answerIndex) {
-        console.log(`✔️ Setting correct answer for question #${questionNum}: ${answerIndex}`);
-        
-        const question = this.questions.find(q => q.id === questionNum);
-        if (question) {
-            question.correctAnswer = parseInt(answerIndex);
-        }
-        
-        this.updateNextButton();
-    }
-
-    handleImageUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        console.log(`🖼️ Image uploaded: ${file.name}`);
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const preview = document.getElementById('imagePreview');
-            preview.innerHTML = `
-                <img src="${e.target.result}" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
-                <p class="mt-2 mb-0 small text-success">
-                    <i class="bi bi-check-circle"></i> ${file.name}
-                </p>
-            `;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    generateSummary() {
-        console.log('📋 Generating quiz summary');
-        
-        const title = document.getElementById('title').value;
-        const description = document.getElementById('description').value;
-        const category = document.getElementById('category').selectedOptions[0]?.text || '';
-        const difficulty = document.getElementById('difficulty').selectedOptions[0]?.text || '';
-        const timeLimit = document.getElementById('time_limit').value;
-        
-        const summaryHTML = `
-            <div class="mb-3">
-                <h6 class="text-primary mb-2">📚 ${title}</h6>
-                ${description ? `<p class="text-muted mb-2">${description}</p>` : ''}
-                <div class="row">
-                    <div class="col-md-4">
-                        <small class="text-muted d-block">Categoria:</small>
-                        <strong>${category}</strong>
-                    </div>
-                    <div class="col-md-4">
-                        <small class="text-muted d-block">Dificuldade:</small>
-                        <strong>${difficulty}</strong>
-                    </div>
-                    <div class="col-md-4">
-                        <small class="text-muted d-block">Tempo:</small>
-                        <strong>${timeLimit ? timeLimit + ' min' : 'Sem limite'}</strong>
-                    </div>
-                </div>
-            </div>
-            <div class="mb-3">
-                <h6 class="text-success mb-2">
-                    <i class="bi bi-question-circle"></i> 
-                    ${this.questions.length} Questão(ões) Criada(s)
-                </h6>
-                <div class="small text-muted">
-                    ${this.questions.map((q, index) => 
-                        `${index + 1}. ${q.text || 'Questão ' + (index + 1)}`
-                    ).join('<br>')}
-                </div>
-            </div>
-        `;
-        
-        document.getElementById('quizSummary').innerHTML = summaryHTML;
-    }
-
-    async submitQuiz() {
-        if (this.isSubmitting) {
-            console.log('⏳ Already submitting, ignoring...');
-            return;
-        }
-        
-        this.isSubmitting = true;
-        console.log('📤 Submitting quiz...');
-        
-        const submitBtn = document.getElementById('finishQuiz');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.classList.add('btn-loading');
-        submitBtn.disabled = true;
-        
-        try {
-            // Mostrar debug info
-            this.updateDebugPanel('Coletando dados do formulário...');
-            
-            const formData = new FormData(document.getElementById('quizForm'));
-            
-            // Adicionar dados das questões
-            this.questions.forEach((question, index) => {
-                const questionData = this.collectQuestionData(question.id);
-                if (questionData) {
-                    Object.entries(questionData).forEach(([key, value]) => {
-                        formData.append(`questions[${index}][${key}]`, value);
-                    });
-                }
-            });
-            
-            this.updateDebugPanel('Enviando para o servidor...');
-            
-            // Log dos dados sendo enviados
-            console.log('📋 Form data being sent:');
-            for (let [key, value] of formData.entries()) {
-                console.log(`  ${key}:`, value);
-            }
-            
-            const response = await fetch(window.location.href, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            
-            console.log(`📡 Response status: ${response.status}`);
-            
-            if (response.ok) {
-                const result = await response.json();
-                console.log('✅ Success response:', result);
-                
-                if (result.success) {
-                    this.showAlert('Quiz criado com sucesso!', 'success');
-                    setTimeout(() => {
-                        window.location.href = result.redirect || '/dashboard';
-                    }, 2000);
-                } else {
-                    console.error('❌ Server returned error:', result);
-                    this.showAlert(result.message || 'Erro ao criar quiz.', 'danger');
-                }
-            } else {
-                const errorText = await response.text();
-                console.error('❌ HTTP Error:', response.status, errorText);
-                this.showAlert(`Erro ${response.status}: ${response.statusText}`, 'danger');
-            }
-            
-        } catch (error) {
-            console.error('💥 Submission error:', error);
-            this.showAlert('Erro de conexão. Tente novamente.', 'danger');
-        } finally {
-            this.isSubmitting = false;
-            submitBtn.classList.remove('btn-loading');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-            this.updateDebugPanel('Processo finalizado.');
-        }
-    }
-
-    collectQuestionData(questionId) {
-        console.log(`📝 Collecting data for question #${questionId}`);
-        
-        const textElement = document.getElementById(`question_${questionId}_text`);
-        if (!textElement) {
-            console.log(`❌ Question #${questionId} not found in DOM`);
-            return null;
-        }
-        
-        const text = textElement.value.trim();
-        const answers = [];
-        let correctAnswer = null;
-        
-        // Coletar alternativas
-        for (let i = 0; i < 4; i++) {
-            const answerInput = document.querySelector(`input[name="questions[${questionId}][answers][${i}]"]`);
-            answers.push(answerInput ? answerInput.value.trim() : '');
-        }
-        
-        // Encontrar resposta correta
-        const correctRadio = document.querySelector(`input[name="questions[${questionId}][correct]"]:checked`);
-        if (correctRadio) {
-            correctAnswer = parseInt(correctRadio.value);
-        }
-        
-        const questionData = {
-            text: text,
-            answer_a: answers[0],
-            answer_b: answers[1],
-            answer_c: answers[2],
-            answer_d: answers[3],
-            correct_answer: correctAnswer
-        };
-        
-        console.log(`✅ Question #${questionId} data:`, questionData);
-        return questionData;
-    }
-
-    updateQuestionsCounter() {
-        const counter = document.getElementById('questionsCounter');
-        if (counter) {
-            const count = this.questions.length;
-            counter.textContent = `${count} questão${count !== 1 ? 'ões' : ''}`;
-        }
-    }
-
-    updateNextButton() {
-        const nextBtn = document.getElementById('nextToFinish');
-        if (nextBtn) {
-            const hasQuestions = this.questions.length > 0;
-            const allQuestionsValid = this.questions.every(q => q.correctAnswer !== null);
-            nextBtn.disabled = !hasQuestions || !allQuestionsValid;
-        }
-    }
-
-    updateStepper() {
-        // Atualizar visual do stepper
-        for (let i = 1; i <= 3; i++) {
-            const step = document.getElementById(`step-${i}`);
-            if (step) {
-                step.classList.remove('active', 'completed');
-                
-                if (i < this.currentStep) {
-                    step.classList.add('completed');
-                } else if (i === this.currentStep) {
-                    step.classList.add('active');
-                }
-            }
-        }
-    }
-
-    updateProgressBar() {
-        const progressBar = document.getElementById('progressBar');
-        if (progressBar) {
-            const percentage = (this.currentStep / 3) * 100;
-            progressBar.style.width = `${percentage}%`;
-        }
-    }
-
-    updateDebugPanel(message) {
-        const debugPanel = document.getElementById('debugPanel');
-        const debugContent = document.getElementById('debugContent');
-        
-        if (debugPanel && debugContent) {
-            debugPanel.style.display = 'block';
-            const timestamp = new Date().toLocaleTimeString();
-            debugContent.innerHTML += `<div class="small">[${timestamp}] ${message}</div>`;
-            debugContent.scrollTop = debugContent.scrollHeight;
-        }
-        
-        console.log(`🔍 DEBUG: ${message}`);
-    }
-
-    showAlert(message, type = 'info') {
-        console.log(`🚨 Alert (${type}): ${message}`);
-        
-        // Remover alertas existentes
-        const existingAlerts = document.querySelectorAll('.alert-dismissible');
-        existingAlerts.forEach(alert => alert.remove());
-        
-        const alertHTML = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                <i class="bi bi-${this.getAlertIcon(type)}"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-        
-        // Inserir no topo do container
-        const container = document.querySelector('.container');
-        if (container) {
-            container.insertAdjacentHTML('afterbegin', alertHTML);
-            
-            // Auto-remover após 5 segundos (exceto erros)
-            if (type !== 'danger') {
-                setTimeout(() => {
-                    const alert = container.querySelector('.alert');
-                    if (alert) {
-                        alert.classList.remove('show');
-                        setTimeout(() => alert.remove(), 300);
-                    }
-                }, 5000);
-            }
-        }
-    }
-
-    getAlertIcon(type) {
-        const icons = {
-            'success': 'check-circle',
-            'danger': 'exclamation-triangle',
-            'warning': 'exclamation-circle',
-            'info': 'info-circle'
-        };
-        return icons[type] || 'info-circle';
-    }
-
-    updateUI() {
-        this.updateStepper();
-        this.updateProgressBar();
-        this.updateQuestionsCounter();
-        this.updateNextButton();
+function debugLog(message, data = null) {
+    if (debugMode) {
+        console.log(`🔍 [DEBUG] ${message}`, data || '');
+        updateDebugPanel(message);
     }
 }
 
-// Inicializar quando o DOM estiver carregado
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎯 DOM loaded, initializing QuizCreator...');
-    window.quizCreator = new QuizCreator();
-    console.log('✅ QuizCreator ready!');
+function updateDebugPanel(message) {
+    const debugPanel = document.getElementById('debugPanel');
+    const debugContent = document.getElementById('debugContent');
+    
+    if (debugPanel && debugContent) {
+        debugPanel.style.display = 'block';
+        const timestamp = new Date().toLocaleTimeString();
+        debugContent.innerHTML += `<div class="small">[${timestamp}] ${message}</div>`;
+        debugContent.scrollTop = debugContent.scrollHeight;
+    }
+}
+
+function addQuestion() {
+    questionCount++;
+    debugLog(`Adding question #${questionCount}`);
+    
+    const questionsContainer = document.getElementById('questionsContainer');
+    const noQuestionsMessage = document.getElementById('noQuestionsMessage');
+    
+    // Esconder mensagem "nenhuma questão"
+    if (noQuestionsMessage) {
+        noQuestionsMessage.style.display = 'none';
+    }
+    
+    const questionHTML = `
+        <div class="question-card card mb-4 fade-in" data-question="${questionCount}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-primary">
+                    <i class="bi bi-question-circle"></i> Questão ${questionCount}
+                </h6>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeQuestion(${questionCount})">
+                    <i class="bi bi-trash"></i> Remover
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Texto da Questão -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Pergunta *</label>
+                    <textarea class="form-control" 
+                              name="question_${questionCount}_text" 
+                              id="question_${questionCount}_text"
+                              rows="3" 
+                              placeholder="Digite sua pergunta aqui..."
+                              required></textarea>
+                </div>
+                
+                <!-- Alternativas -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Alternativas *</label>
+                    
+                    <div class="answer-option">
+                        <div class="input-group mb-2">
+                            <div class="input-group-text">
+                                <input type="radio" name="question_${questionCount}_correct" value="0" required>
+                            </div>
+                            <span class="input-group-text fw-bold">A</span>
+                            <input type="text" class="form-control" name="question_${questionCount}_option_a" placeholder="Alternativa A" required>
+                        </div>
+                    </div>
+                    
+                    <div class="answer-option">
+                        <div class="input-group mb-2">
+                            <div class="input-group-text">
+                                <input type="radio" name="question_${questionCount}_correct" value="1" required>
+                            </div>
+                            <span class="input-group-text fw-bold">B</span>
+                            <input type="text" class="form-control" name="question_${questionCount}_option_b" placeholder="Alternativa B" required>
+                        </div>
+                    </div>
+                    
+                    <div class="answer-option">
+                        <div class="input-group mb-2">
+                            <div class="input-group-text">
+                                <input type="radio" name="question_${questionCount}_correct" value="2" required>
+                            </div>
+                            <span class="input-group-text fw-bold">C</span>
+                            <input type="text" class="form-control" name="question_${questionCount}_option_c" placeholder="Alternativa C" required>
+                        </div>
+                    </div>
+                    
+                    <div class="answer-option">
+                        <div class="input-group mb-2">
+                            <div class="input-group-text">
+                                <input type="radio" name="question_${questionCount}_correct" value="3" required>
+                            </div>
+                            <span class="input-group-text fw-bold">D</span>
+                            <input type="text" class="form-control" name="question_${questionCount}_option_d" placeholder="Alternativa D" required>
+                        </div>
+                    </div>
+                    
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i> 
+                        Marque a alternativa correta clicando no círculo ao lado
+                    </small>
+                </div>
+                
+                <!-- Imagem da Questão -->
+                <div class="mb-3">
+                    <label class="form-label">Imagem da Questão (opcional)</label>
+                    <input type="file" class="form-control" name="question_${questionCount}_image" accept="image/*">
+                </div>
+            </div>
+        </div>
+    `;
+    
+    questionsContainer.insertAdjacentHTML('beforeend', questionHTML);
+    
+    // Focar no campo de texto da nova questão
+    setTimeout(() => {
+        const textField = document.getElementById(`question_${questionCount}_text`);
+        if (textField) {
+            textField.focus();
+        }
+    }, 100);
+    
+    debugLog(`Question #${questionCount} added successfully`);
+}
+
+function removeQuestion(questionNum) {
+    debugLog(`Removing question #${questionNum}`);
+    
+    if (confirm('Tem certeza que deseja remover esta questão?')) {
+        const questionElement = document.querySelector(`[data-question="${questionNum}"]`);
+        if (questionElement) {
+            questionElement.remove();
+            debugLog(`Question #${questionNum} removed`);
+            
+            // Mostrar mensagem se não há mais questões
+            const remainingQuestions = document.querySelectorAll('.question-card');
+            if (remainingQuestions.length === 0) {
+                const noQuestionsMessage = document.getElementById('noQuestionsMessage');
+                if (noQuestionsMessage) {
+                    noQuestionsMessage.style.display = 'block';
+                }
+            }
+        }
+    }
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    debugLog('DOM loaded, initializing event listeners');
+    
+    // Botão adicionar questão
+    const addQuestionBtn = document.getElementById('addQuestionBtn');
+    if (addQuestionBtn) {
+        addQuestionBtn.addEventListener('click', addQuestion);
+    }
+    
+    // Upload de imagem
+    const imageInput = document.getElementById('image');
+    const imageUploadArea = document.querySelector('.image-upload-area');
+    
+    if (imageInput && imageUploadArea) {
+        imageUploadArea.addEventListener('click', () => imageInput.click());
+        
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                debugLog(`Image selected: ${file.name}`);
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('imagePreview');
+                    if (preview) {
+                        preview.innerHTML = `
+                            <img src="${e.target.result}" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                            <p class="mt-2 mb-0 small text-success">
+                                <i class="bi bi-check-circle"></i> ${file.name}
+                            </p>
+                        `;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Envio do formulário
+    const form = document.getElementById('quizForm');
+    if (form) {
+        form.addEventListener('submit', handleFormSubmit);
+    }
+    
+    debugLog('Event listeners configured successfully');
 });
 
-// Log global para debug
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    if (isSubmitting) {
+        debugLog('Already submitting, ignoring...');
+        return;
+    }
+    
+    isSubmitting = true;
+    debugLog('Starting form submission');
+    
+    const submitBtn = document.getElementById('createQuizBtn');
+    const originalText = submitBtn.innerHTML;
+    
+    // Loading state
+    submitBtn.classList.add('btn-loading');
+    submitBtn.disabled = true;
+    
+    try {
+        // Validar formulário
+        if (!validateForm()) {
+            debugLog('Form validation failed');
+            return;
+        }
+        
+        // Coletar dados
+        const formData = collectFormData();
+        if (!formData) {
+            debugLog('Failed to collect form data');
+            return;
+        }
+        
+        debugLog('Sending form data to server...');
+        
+        // Enviar para servidor
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        debugLog(`Server response status: ${response.status}`);
+        
+        if (response.ok) {
+            const result = await response.text();
+            debugLog('Server response received', result.substring(0, 200) + '...');
+            
+            try {
+                const jsonResult = JSON.parse(result);
+                if (jsonResult.success) {
+                    showAlert('Quiz criado com sucesso!', 'success');
+                    setTimeout(() => {
+                        window.location.href = jsonResult.redirect || '/dashboard';
+                    }, 2000);
+                } else {
+                    showAlert(jsonResult.message || 'Erro ao criar quiz', 'danger');
+                }
+            } catch (jsonError) {
+                // Se não for JSON, assumir que foi criado com sucesso
+                debugLog('Non-JSON response, assuming success');
+                showAlert('Quiz criado com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 2000);
+            }
+        } else {
+            const errorText = await response.text();
+            debugLog(`Server error: ${response.status}`, errorText);
+            showAlert(`Erro ${response.status}: ${response.statusText}`, 'danger');
+        }
+        
+    } catch (error) {
+        debugLog('Submission error', error);
+        console.error('Submission error:', error);
+        showAlert('Erro de conexão. Tente novamente.', 'danger');
+    } finally {
+        isSubmitting = false;
+        submitBtn.classList.remove('btn-loading');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+}
+
+function validateForm() {
+    debugLog('Validating form...');
+    
+    // Validar campos básicos
+    const title = document.getElementById('title').value.trim();
+    const category = document.getElementById('category').value;
+    const difficulty = document.getElementById('difficulty').value;
+    
+    if (!title) {
+        showAlert('Título é obrigatório', 'warning');
+        return false;
+    }
+    
+    if (!category) {
+        showAlert('Categoria é obrigatória', 'warning');
+        return false;
+    }
+    
+    if (!difficulty) {
+        showAlert('Dificuldade é obrigatória', 'warning');
+        return false;
+    }
+    
+    // Validar questões
+    const questions = document.querySelectorAll('.question-card');
+    if (questions.length === 0) {
+        showAlert('Adicione pelo menos uma questão', 'warning');
+        return false;
+    }
+    
+    debugLog(`Found ${questions.length} questions to validate`);
+    
+    for (let i = 0; i < questions.length; i++) {
+        const questionElement = questions[i];
+        const questionNum = questionElement.dataset.question;
+        
+        debugLog(`Validating question #${questionNum}`);
+        
+        // Validar texto da questão
+        const textField = questionElement.querySelector(`[name="question_${questionNum}_text"]`);
+        if (!textField || !textField.value.trim()) {
+            showAlert(`Questão ${parseInt(i) + 1}: Texto da pergunta é obrigatório`, 'warning');
+            return false;
+        }
+        
+        // Validar alternativas
+        const options = ['a', 'b', 'c', 'd'];
+        for (let option of options) {
+            const optionField = questionElement.querySelector(`[name="question_${questionNum}_option_${option}"]`);
+            if (!optionField || !optionField.value.trim()) {
+                showAlert(`Questão ${parseInt(i) + 1}: Todas as alternativas devem ser preenchidas`, 'warning');
+                return false;
+            }
+        }
+        
+        // Validar resposta correta
+        const correctAnswer = questionElement.querySelector(`input[name="question_${questionNum}_correct"]:checked`);
+        if (!correctAnswer) {
+            showAlert(`Questão ${parseInt(i) + 1}: Selecione a resposta correta`, 'warning');
+            return false;
+        }
+        
+        debugLog(`Question #${questionNum} validation passed`);
+    }
+    
+    debugLog('Form validation successful');
+    return true;
+}
+
+function collectFormData() {
+    debugLog('Collecting form data...');
+    
+    const formData = new FormData();
+    
+    // Dados básicos
+    const basicFields = ['title', 'description', 'category', 'difficulty', 'time_limit'];
+    basicFields.forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        if (field && field.value) {
+            formData.append(fieldName, field.value);
+            debugLog(`Added basic field: ${fieldName} = ${field.value}`);
+        }
+    });
+    
+    // Imagem principal
+    const imageField = document.getElementById('image');
+    if (imageField && imageField.files[0]) {
+        formData.append('image', imageField.files[0]);
+        debugLog(`Added main image: ${imageField.files[0].name}`);
+    }
+    
+    // Questões
+    const questions = document.querySelectorAll('.question-card');
+    debugLog(`Collecting data from ${questions.length} questions`);
+    
+    questions.forEach((questionElement, index) => {
+        const questionNum = questionElement.dataset.question;
+        debugLog(`Collecting data for question #${questionNum} (index ${index})`);
+        
+        // Texto da questão
+        const textField = questionElement.querySelector(`[name="question_${questionNum}_text"]`);
+        if (textField) {
+            formData.append(`questions[${index}][text]`, textField.value);
+        }
+        
+        // Alternativas
+        const options = ['a', 'b', 'c', 'd'];
+        options.forEach(option => {
+            const optionField = questionElement.querySelector(`[name="question_${questionNum}_option_${option}"]`);
+            if (optionField) {
+                formData.append(`questions[${index}][${option}]`, optionField.value);
+            }
+        });
+        
+        // Resposta correta
+        const correctAnswer = questionElement.querySelector(`input[name="question_${questionNum}_correct"]:checked`);
+        if (correctAnswer) {
+            formData.append(`questions[${index}][correct]`, correctAnswer.value);
+        }
+        
+        // Imagem da questão
+        const imageField = questionElement.querySelector(`[name="question_${questionNum}_image"]`);
+        if (imageField && imageField.files[0]) {
+            formData.append(`questions[${index}][image]`, imageField.files[0]);
+            debugLog(`Added image for question #${questionNum}`);
+        }
+    });
+    
+    debugLog('Form data collection complete');
+    
+    // Debug: mostrar todos os dados coletados
+    for (let [key, value] of formData.entries()) {
+        debugLog(`FormData: ${key} = ${value instanceof File ? `[File: ${value.name}]` : value}`);
+    }
+    
+    return formData;
+}
+
+function showAlert(message, type = 'info') {
+    debugLog(`Showing alert (${type}): ${message}`);
+    
+    // Remover alertas existentes
+    const existingAlerts = document.querySelectorAll('.alert-dismissible');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    const alertHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    const container = document.querySelector('.container');
+    if (container) {
+        container.insertAdjacentHTML('afterbegin', alertHTML);
+        
+        // Auto-remover após 5 segundos (exceto erros)
+        if (type !== 'danger') {
+            setTimeout(() => {
+                const alert = container.querySelector('.alert');
+                if (alert) {
+                    alert.classList.remove('show');
+                    setTimeout(() => alert.remove(), 300);
+                }
+            }, 5000);
+        }
+    }
+}
+
+// Global error handling
 window.addEventListener('error', (e) => {
-    console.error('💥 Global error:', e.error);
+    debugLog(`Global error: ${e.error?.message || e.message}`);
+    console.error('Global error:', e.error);
 });
 
 window.addEventListener('unhandledrejection', (e) => {
-    console.error('💥 Unhandled promise rejection:', e.reason);
+    debugLog(`Unhandled promise rejection: ${e.reason}`);
+    console.error('Unhandled promise rejection:', e.reason);
 });
 </script>
 
