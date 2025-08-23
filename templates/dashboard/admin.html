@@ -127,7 +127,7 @@
                             <div class="user-info">
                                 <div class="user-name">{{ user.full_name or user.username or 'Usuário' }}</div>
                                 <div class="user-meta">
-                                    {% if hasattr(user, 'get_user_type_color') and hasattr(user, 'get_user_type_display') %}
+                                    {% if user.get_user_type_color and user.get_user_type_display %}
                                     <span class="badge bg-{{ user.get_user_type_color() }}">
                                         {{ user.get_user_type_display() }}
                                     </span>
@@ -227,7 +227,7 @@
                                     <strong>{{ result.quiz.title if result.quiz else 'Quiz' }}</strong>
                                 </div>
                                 <div class="activity-meta">
-                                    {% if hasattr(result, 'grade_color') and hasattr(result, 'percentage_score') %}
+                                    {% if result.grade_color and result.percentage_score %}
                                     <span class="badge bg-{{ result.grade_color }}">
                                         {{ result.score or 0 }}/{{ result.total_questions or 0 }}
                                         ({{ result.percentage_score or 0 }}%)
