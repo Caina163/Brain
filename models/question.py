@@ -8,285 +8,275 @@ Define a estrutura das questões dos quizzes com:
 - Sistema de ordenação
 - Validação de respostas
 """
-from datetime import datetime
-import random
 
-# Importação correta sem circular reference
-try:
-    from app import db
-except ImportError:
-    db = None
+from datetime import datetime
+from flask import current_app
+from flask_sqlalchemy import SQLAlchemy
+
+# Obter instância do SQLAlchemy do Flask
+def get_db():
+    return current_app.extensions['sqlalchemy']
+
+db = get_db()
+
 
 class Question(db.Model):
+    """
+    Modelo de questão do sistema Brainchild
+    """
+
     __tablename__ = 'questions'
-    
-    # Campos principais
+
+    # Campos da tabela
     id = db.Column(db.Integer, primary_key=True)
     quiz_id = db.Column(db.Integer, db.ForeignKey('quizzes.id'), nullable=False)
     question_text = db.Column(db.Text, nullable=False)
-    
+
     # Sistema de respostas
-    correct_answer = db.Column(db.String(500), nullable=False)
-    wrong_answer_1 = db.Column(db.String(500))
-    wrong_answer_2 = db.Column(db.String(500))
-    wrong_answer_3 = db.Column(db.String(500))
-    
-    # Configurações
+    correct_answer = db.Column(db.String(500), nullable=False)  # Resposta correta (sempre primeira)
+    option_a = db.Column(db.String(500), nullable=True)  # Alternativa incorreta 1
+    option_b = db.Column(db.String(500), nullable=True)  # Alternativa incorreta 2
+    option_c = db.Column(db.String(500), nullable=True)  # Alternativa incorreta 3
+
+    # Imagem da questão (opcional)
+    image_filename = db.Column(db.String(255), nullable=True)
+
+    # Controle de ordem e timestamps
     order_index = db.Column(db.Integer, default=0)
-    points = db.Column(db.Integer, default=1)
-    time_limit = db.Column(db.Integer)  # em segundos
-    
-    # Upload de imagem
-    image_filename = db.Column(db.String(255))
-    
-    # Metadados
-    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Estatísticas
-    total_attempts = db.Column(db.Integer, default=0)
-    correct_attempts = db.Column(db.Integer, default=0)
-    
-    def __init__(self, **kwargs):
-        super(Question, self).__init__(**kwargs)
-        if not self.created_at:
-            self.created_at = datetime.utcnow()
-        if not self.updated_at:
-            self.updated_at = datetime.utcnow()
-    
-    @property
-    def difficulty_rate(self):
-        """Calcula a taxa de dificuldade (% de erros)"""
-        if self.total_attempts == 0:
-            return 0
-        return round(((self.total_attempts - self.correct_attempts) / self.total_attempts) * 100, 1)
-    
-    @property
-    def success_rate(self):
-        """Calcula a taxa de sucesso (% de acertos)"""
-        if self.total_attempts == 0:
-            return 0
-        return round((self.correct_attempts / self.total_attempts) * 100, 1)
-    
-    def get_all_answers(self, shuffle=True):
-        """Retorna todas as respostas possíveis"""
-        answers = [self.correct_answer]
-        
-        # Adiciona respostas incorretas que existem
-        if self.wrong_answer_1:
-            answers.append(self.wrong_answer_1)
-        if self.wrong_answer_2:
-            answers.append(self.wrong_answer_2)
-        if self.wrong_answer_3:
-            answers.append(self.wrong_answer_3)
-        
-        # Embaralha se solicitado
-        if shuffle:
-            random.shuffle(answers)
-            
-        return answers
-    
-    def get_wrong_answers(self):
-        """Retorna apenas as respostas incorretas"""
-        wrong_answers = []
-        
-        if self.wrong_answer_1:
-            wrong_answers.append(self.wrong_answer_1)
-        if self.wrong_answer_2:
-            wrong_answers.append(self.wrong_answer_2)
-        if self.wrong_answer_3:
-            wrong_answers.append(self.wrong_answer_3)
-            
-        return wrong_answers
-    
-    def is_correct_answer(self, answer):
-        """Verifica se a resposta está correta"""
+
+    def __init__(self, quiz_id, question_text, correct_answer, option_a=None, option_b=None, option_c=None,
+                 image_filename=None, order_index=0):
+        self.quiz_id = quiz_id
+        self.question_text = question_text
+        self.correct_answer = correct_answer
+        self.option_a = option_a
+        self.option_b = option_b
+        self.option_c = option_c
+        self.image_filename = image_filename
+        self.order_index = order_index
+
+    def get_all_options(self):
+        """Retorna todas as opções de resposta (incluindo a correta)"""
+        options = [self.correct_answer]
+
+        if self.option_a and self.option_a.strip():
+            options.append(self.option_a)
+        if self.option_b and self.option_b.strip():
+            options.append(self.option_b)
+        if self.option_c and self.option_c.strip():
+            options.append(self.option_c)
+
+        return options
+
+    def get_incorrect_options(self):
+        """Retorna apenas as opções incorretas"""
+        options = []
+
+        if self.option_a and self.option_a.strip():
+            options.append(self.option_a)
+        if self.option_b and self.option_b.strip():
+            options.append(self.option_b)
+        if self.option_c and self.option_c.strip():
+            options.append(self.option_c)
+
+        return options
+
+    def is_answer_correct(self, answer):
+        """Verifica se a resposta fornecida está correta"""
         if not answer:
             return False
-        return answer.strip().lower() == self.correct_answer.strip().lower()
-    
-    def record_attempt(self, is_correct):
-        """Registra uma tentativa de resposta"""
+
+        # Normalizar strings para comparação (remover espaços e converter para minúsculo)
+        correct = self.correct_answer.strip().lower()
+        provided = answer.strip().lower()
+
+        return correct == provided
+
+    def validate_answer_by_letter(self, letter, alternatives_list):
+        """
+        Valida resposta pela letra escolhida
+        alternatives_list deve ser o resultado de get_questions_for_play()
+        """
+        if not letter or not alternatives_list:
+            return False
+
+        # Encontrar a alternativa correspondente à letra
+        for alternative in alternatives_list:
+            if alternative['letter'].upper() == letter.upper():
+                return alternative['is_correct']
+
+        return False
+
+    @property
+    def options_count(self):
+        """Retorna o número de opções disponíveis (incluindo resposta correta)"""
+        count = 1  # Resposta correta sempre existe
+
+        if self.option_a and self.option_a.strip():
+            count += 1
+        if self.option_b and self.option_b.strip():
+            count += 1
+        if self.option_c and self.option_c.strip():
+            count += 1
+
+        return count
+
+    def has_image(self):
+        """Verifica se a questão tem imagem"""
+        return self.image_filename is not None and self.image_filename.strip() != ''
+
+    def get_formatted_question(self):
+        """Retorna a questão formatada com quebras de linha convertidas para HTML"""
+        if not self.question_text:
+            return ""
+
+        # Converter quebras de linha para HTML
+        formatted = self.question_text.replace('\n', '<br>')
+        return formatted
+
+    def get_question_preview(self, max_length=100):
+        """Retorna preview da questão para listagens"""
+        if not self.question_text:
+            return "Questão sem texto"
+
+        text = self.question_text.strip()
+        if len(text) <= max_length:
+            return text
+
+        # Truncar e adicionar reticências
+        return text[:max_length].rsplit(' ', 1)[0] + '...'
+
+    def validate_options(self):
+        """Valida se a questão tem pelo menos 2 opções (1 correta + 1 incorreta)"""
+        incorrect_count = len(self.get_incorrect_options())
+        return incorrect_count >= 1  # Mínimo 1 alternativa incorreta + resposta correta
+
+    def get_difficulty_estimate(self):
+        """Estima dificuldade baseada no comprimento do texto e número de opções"""
+        text_length = len(self.question_text) if self.question_text else 0
+        options_count = self.options_count
+        has_img = self.has_image()
+
+        # Cálculo simples de dificuldade
+        difficulty_score = 0
+
+        # Baseado no texto
+        if text_length > 200:
+            difficulty_score += 2
+        elif text_length > 100:
+            difficulty_score += 1
+
+        # Baseado no número de opções
+        if options_count >= 4:
+            difficulty_score += 2
+        elif options_count == 3:
+            difficulty_score += 1
+
+        # Se tem imagem, pode ser mais fácil (visual) ou mais difícil (interpretação)
+        if has_img:
+            difficulty_score += 1
+
+        # Classificar dificuldade
+        if difficulty_score >= 4:
+            return 'Difícil'
+        elif difficulty_score >= 2:
+            return 'Médio'
+        else:
+            return 'Fácil'
+
+    def get_difficulty_color(self):
+        """Retorna cor da dificuldade"""
+        difficulty = self.get_difficulty_estimate()
+        colors = {
+            'Fácil': 'success',
+            'Médio': 'warning',
+            'Difícil': 'danger'
+        }
+        return colors.get(difficulty, 'secondary')
+
+    def duplicate_to_quiz(self, target_quiz_id):
+        """Duplica questão para outro quiz"""
         try:
-            self.total_attempts += 1
-            if is_correct:
-                self.correct_attempts += 1
-            
-            self.updated_at = datetime.utcnow()
-            db.session.commit()
-            return True
-        except Exception as e:
-            db.session.rollback()
-            return False
-    
-    def move_up(self):
-        """Move a questão uma posição para cima"""
-        try:
-            # Encontra a questão anterior
-            previous_question = Question.query.filter(
-                Question.quiz_id == self.quiz_id,
-                Question.order_index < self.order_index,
-                Question.is_active == True
-            ).order_by(Question.order_index.desc()).first()
-            
-            if previous_question:
-                # Troca as posições
-                temp_order = self.order_index
-                self.order_index = previous_question.order_index
-                previous_question.order_index = temp_order
-                
-                # Atualiza timestamps
-                self.updated_at = datetime.utcnow()
-                previous_question.updated_at = datetime.utcnow()
-                
-                db.session.commit()
-                return True
-            return False
-        except Exception as e:
-            db.session.rollback()
-            return False
-    
-    def move_down(self):
-        """Move a questão uma posição para baixo"""
-        try:
-            # Encontra a próxima questão
-            next_question = Question.query.filter(
-                Question.quiz_id == self.quiz_id,
-                Question.order_index > self.order_index,
-                Question.is_active == True
-            ).order_by(Question.order_index.asc()).first()
-            
-            if next_question:
-                # Troca as posições
-                temp_order = self.order_index
-                self.order_index = next_question.order_index
-                next_question.order_index = temp_order
-                
-                # Atualiza timestamps
-                self.updated_at = datetime.utcnow()
-                next_question.updated_at = datetime.utcnow()
-                
-                db.session.commit()
-                return True
-            return False
-        except Exception as e:
-            db.session.rollback()
-            return False
-    
-    def duplicate(self):
-        """Cria uma cópia da questão"""
-        try:
-            # Conta questões do quiz para definir nova posição
-            max_order = db.session.query(db.func.max(Question.order_index))\
-                                .filter_by(quiz_id=self.quiz_id, is_active=True)\
-                                .scalar() or 0
-            
-            # Cria nova questão
+            db = current_app.extensions['sqlalchemy']
             new_question = Question(
-                quiz_id=self.quiz_id,
-                question_text=f"{self.question_text} (Cópia)",
+                quiz_id=target_quiz_id,
+                question_text=self.question_text,
                 correct_answer=self.correct_answer,
-                wrong_answer_1=self.wrong_answer_1,
-                wrong_answer_2=self.wrong_answer_2,
-                wrong_answer_3=self.wrong_answer_3,
-                order_index=max_order + 1,
-                points=self.points,
-                time_limit=self.time_limit,
-                image_filename=self.image_filename
+                option_a=self.option_a,
+                option_b=self.option_b,
+                option_c=self.option_c,
+                image_filename=self.image_filename,  # Nota: a imagem também seria copiada
+                order_index=0  # Será ajustado conforme necessário
             )
-            
+
             db.session.add(new_question)
-            db.session.commit()
             return new_question
         except Exception as e:
-            db.session.rollback()
+            print(f"Erro ao duplicar questão: {e}")
             return None
-    
-    def soft_delete(self):
-        """Exclusão lógica da questão"""
+
+    def move_up(self):
+        """Move questão para cima na ordem"""
         try:
-            self.is_active = False
-            self.updated_at = datetime.utcnow()
-            db.session.commit()
-            return True
+            if self.order_index > 0:
+                db = current_app.extensions['sqlalchemy']
+                # Encontrar questão acima
+                question_above = Question.query.filter_by(
+                    quiz_id=self.quiz_id,
+                    order_index=self.order_index - 1
+                ).first()
+
+                if question_above:
+                    # Trocar posições
+                    question_above.order_index = self.order_index
+                    self.order_index = self.order_index - 1
+                    db.session.commit()
+                    return True
+
+            return False
         except Exception as e:
             db.session.rollback()
+            print(f"Erro ao mover questão: {e}")
             return False
-    
-    def restore(self):
-        """Restaura questão excluída logicamente"""
+
+    def move_down(self):
+        """Move questão para baixo na ordem"""
         try:
-            self.is_active = True
-            self.updated_at = datetime.utcnow()
-            db.session.commit()
-            return True
+            db = current_app.extensions['sqlalchemy']
+            # Encontrar questão abaixo
+            question_below = Question.query.filter_by(
+                quiz_id=self.quiz_id,
+                order_index=self.order_index + 1
+            ).first()
+
+            if question_below:
+                # Trocar posições
+                question_below.order_index = self.order_index
+                self.order_index = self.order_index + 1
+                db.session.commit()
+                return True
+
+            return False
         except Exception as e:
             db.session.rollback()
+            print(f"Erro ao mover questão: {e}")
             return False
-    
-    def update_order_in_quiz(self):
-        """Reorganiza a ordem das questões após alterações"""
-        try:
-            questions = Question.query.filter_by(
-                quiz_id=self.quiz_id, 
-                is_active=True
-            ).order_by(Question.order_index).all()
-            
-            # Reordena sequencialmente
-            for i, question in enumerate(questions, 1):
-                if question.order_index != i:
-                    question.order_index = i
-                    question.updated_at = datetime.utcnow()
-            
-            db.session.commit()
-            return True
-        except Exception as e:
-            db.session.rollback()
-            return False
-    
-    @staticmethod
-    def get_next_order_index(quiz_id):
-        """Retorna o próximo índice de ordenação para um quiz"""
-        try:
-            max_order = db.session.query(db.func.max(Question.order_index))\
-                                .filter_by(quiz_id=quiz_id, is_active=True)\
-                                .scalar()
-            return (max_order or 0) + 1
-        except Exception as e:
-            return 1
-    
-    @staticmethod
-    def get_quiz_questions(quiz_id, include_inactive=False):
-        """Retorna todas as questões de um quiz"""
-        try:
-            query = Question.query.filter_by(quiz_id=quiz_id)
-            
-            if not include_inactive:
-                query = query.filter_by(is_active=True)
-                
-            return query.order_by(Question.order_index).all()
-        except Exception as e:
-            return []
-    
-    def to_dict(self):
-        """Converte questão para dicionário (útil para JSON)"""
+
+    def get_statistics_from_results(self):
+        """Retorna estatísticas da questão baseadas nos resultados dos jogos"""
+        # Esta função seria implementada quando tivermos um sistema
+        # mais detalhado de tracking de respostas por questão
+
+        # Por enquanto, retorna estatísticas simuladas
         return {
-            'id': self.id,
-            'quiz_id': self.quiz_id,
-            'question_text': self.question_text,
-            'correct_answer': self.correct_answer,
-            'wrong_answers': self.get_wrong_answers(),
-            'all_answers': self.get_all_answers(),
-            'order_index': self.order_index,
-            'points': self.points,
-            'time_limit': self.time_limit,
-            'image_filename': self.image_filename,
-            'success_rate': self.success_rate,
-            'difficulty_rate': self.difficulty_rate,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'total_attempts': 0,
+            'correct_answers': 0,
+            'accuracy_rate': 0,
+            'most_chosen_wrong_answer': None
         }
-    
+
     def __repr__(self):
-        return f'<Question {self.id}: {self.question_text[:50]}...>'
+        preview = self.get_question_preview(50)
+        return f'<Question {self.id}: {preview}>'
